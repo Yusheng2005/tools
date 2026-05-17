@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 自動合併工具</title>
+    <!-- 引入 pdf-lib 函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: white;
+            padding: 40px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        /* 增加這裡的 margin-bottom 來拉開間距 */
+        .description {
+            margin-bottom: 35px; 
+            line-height: 1.6;
+        }
+        .file-upload-wrapper {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background-color: #f0f8ff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: block;
+        }
+        .file-upload-wrapper:hover {
+            background-color: #e1f0fa;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-list {
+            text-align: left;
+            margin: 15px 0;
+            font-size: 0.9em;
+            color: #555;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .download-btn {
+            display: none;
+            background-color: #2ecc71;
+            margin-top: 15px;
+            text-decoration: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 5px;
+            display: block;
+        }
+        .download-btn:hover {
+            background-color: #27ae60;
+        }
+        /* 網頁底部的版權/版本宣告區塊 */
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📄 PDF 自動合併工具</h2>
+    <!-- 加上了 class="description" 藉由 CSS 拉開與下方選擇框的距離 -->
+    <p class="description">請選擇多個 PDF 檔案，將會自動合併成一個檔案<br><small>(合併順序為你選取檔案的順序)</small></p>
+
+    <label class="file-upload-wrapper">
+        點擊這裡選擇 PDF 檔案
+        <input type="file" id="pdf-input" accept="application/pdf" multiple>
+    </label>
+
+    <div class="file-list" id="file-list"></div>
+
+    <button id="merge-btn" disabled>開始合併 PDF</button>
+
+    <p id="status"></p>
+
+    <!-- 下載連結 -->
+    <a id="download-link" class="download-btn" style="display: none;">⬇️ 下載合併後的 PDF</a>
+</div>
+
+<!-- 新增的版本與作者標示 -->
+<div class="footer">
+    V 1.0.2<br>
+    Built by Minami
+</div>
+
+<script>
+    const pdfInput = document.getElementById('pdf-input');
+    const fileListEl = document.getElementById('file-list');
+    const mergeBtn = document.getElementById('merge-btn');
+    const statusEl = document.getElementById('status');
+    const downloadLink = document.getElementById('download-link');
+
+    let selectedFiles = [];
+
+    // 當使用者選擇檔案時
+    pdfInput.addEventListener('change', (e) => {
+        selectedFiles = Array.from(e.target.files);
+        fileListEl.innerHTML = '';
+        downloadLink.style.display = 'none';
+        statusEl.textContent = ''; // 清除狀態文字
+        
+        if (selectedFiles.length > 0) {
+            mergeBtn.disabled = false;
+            let listHtml = '<strong>已選擇的檔案：</strong><ul>';
+            selectedFiles.forEach(file => {
+                listHtml += `<li>${file.name}</li>`;
+            });
+            listHtml += '</ul>';
+            fileListEl.innerHTML = listHtml;
+        } else {
+            mergeBtn.disabled = true;
+        }
+    });
+
+    // 點擊合併按鈕
+    mergeBtn.addEventListener('click', async () => {
+        if (selectedFiles.length < 2) {
+            alert('請至少選擇 2 個 PDF 檔案才能進行合併！');
+            return;
+        }
+
+        statusEl.style.color = '#e67e22';
+        statusEl.textContent = '⏳ 正在合併中，請稍候...';
+        mergeBtn.disabled = true;
+        downloadLink.style.display = 'none';
+
+        try {
+            // 引入 PDFLib
+            const { PDFDocument } = PDFLib;
+            
+            // 創建一個新的空白 PDF
+            const mergedPdf = await PDFDocument.create();
+
+            // 依序處理每個上傳的 PDF 檔案
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                // 讀取檔案為 ArrayBuffer
+                const arrayBuffer = await file.arrayBuffer();
+                // 載入 PDF
+                const pdf = await PDFDocument.load(arrayBuffer);
+                // 複製每一頁
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                // 將複製的頁面加到新的 PDF 中
+                copiedPages.forEach((page) => {
+                    mergedPdf.addPage(page);
+                });
+            }
+
+            // 將合併後的 PDF 儲存為 Uint8Array
+            const mergedPdfFile = await mergedPdf.save();
+
+            // 將結果轉換為 Blob 並建立下載連結
+            const blob = new Blob([mergedPdfFile], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+
+            downloadLink.href = url;
+            downloadLink.download = `合併文件_${new Date().getTime()}.pdf`; // 自動產生檔名
+            downloadLink.style.display = 'block';
+
+            statusEl.style.color = '#27ae60';
+            statusEl.textContent = '✅ 合併完成！請點擊下方按鈕下載。';
+
+        } catch (error) {
+            console.error('合併發生錯誤:', error);
+            statusEl.style.color = '#e74c3c';
+            statusEl.textContent = '❌ 合併失敗，請確保上傳的都是有效的 PDF 檔案。';
+        } finally {
+            mergeBtn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
