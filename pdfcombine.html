@@ -26,14 +26,13 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             text-align: center;
         }
         h2 {
             margin-top: 0;
             color: #2c3e50;
         }
-        /* 增加這裡的 margin-bottom 來拉開間距 */
         .description {
             margin-bottom: 35px; 
             line-height: 1.6;
@@ -54,15 +53,63 @@
         input[type="file"] {
             display: none;
         }
+        
+        /* 檔案列表與拖曳相關樣式 */
         .file-list {
             text-align: left;
             margin: 15px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            cursor: grab;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: background-color 0.2s;
+        }
+        .file-item:active {
+            cursor: grabbing;
+        }
+        .file-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #3498db;
+            background-color: #f0f8ff;
+        }
+        .drag-handle {
+            margin-right: 15px;
+            color: #95a5a6;
+            cursor: grab;
+            font-size: 1.2em;
+        }
+        .file-name {
+            flex-grow: 1;
             font-size: 0.9em;
             color: #555;
-            max-height: 150px;
-            overflow-y: auto;
+            word-break: break-all;
+            padding-right: 10px;
         }
-        button {
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+            width: auto;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .main-btn {
             background-color: #3498db;
             color: white;
             border: none;
@@ -72,11 +119,12 @@
             cursor: pointer;
             transition: background-color 0.3s;
             width: 100%;
+            margin-top: 10px;
         }
-        button:hover {
+        .main-btn:hover {
             background-color: #2980b9;
         }
-        button:disabled {
+        .main-btn:disabled {
             background-color: #95a5a6;
             cursor: not-allowed;
         }
@@ -97,7 +145,6 @@
         .download-btn:hover {
             background-color: #27ae60;
         }
-        /* 網頁底部的版權/版本宣告區塊 */
         .footer {
             margin-top: 30px;
             text-align: center;
@@ -111,17 +158,20 @@
 
 <div class="container">
     <h2>📄 PDF 自動合併工具</h2>
-    <!-- 加上了 class="description" 藉由 CSS 拉開與下方選擇框的距離 -->
-    <p class="description">請選擇多個 PDF 檔案，將會自動合併成一個檔案<br><small>(合併順序為你選取檔案的順序)</small></p>
+    <p class="description">
+        可以多次選擇或拖曳檔案上傳，<br>
+        <small>💡 提示：按住檔案列表中的 <b>☰</b> 可以上下拖曳調整合併順序</small>
+    </p>
 
     <label class="file-upload-wrapper">
-        點擊這裡選擇 PDF 檔案
+        點擊這裡加入 PDF 檔案
         <input type="file" id="pdf-input" accept="application/pdf" multiple>
     </label>
 
+    <!-- 檔案會在這裡生成列表 -->
     <div class="file-list" id="file-list"></div>
 
-    <button id="merge-btn" disabled>開始合併 PDF</button>
+    <button id="merge-btn" class="main-btn" disabled>開始合併 PDF</button>
 
     <p id="status"></p>
 
@@ -129,9 +179,9 @@
     <a id="download-link" class="download-btn" style="display: none;">⬇️ 下載合併後的 PDF</a>
 </div>
 
-<!-- 新增的版本與作者標示 -->
+<!-- 版本與作者標示 -->
 <div class="footer">
-    V 1.0.2<br>
+    V 1.0.3<br>
     Built by Minami
 </div>
 
@@ -142,32 +192,114 @@
     const statusEl = document.getElementById('status');
     const downloadLink = document.getElementById('download-link');
 
-    let selectedFiles = [];
+    // 使用 Map 來儲存檔案，key 是唯一 ID，value 是 File 物件
+    const fileStore = new Map();
+    let fileIdCounter = 0;
 
     // 當使用者選擇檔案時
     pdfInput.addEventListener('change', (e) => {
-        selectedFiles = Array.from(e.target.files);
-        fileListEl.innerHTML = '';
-        downloadLink.style.display = 'none';
-        statusEl.textContent = ''; // 清除狀態文字
+        const newFiles = Array.from(e.target.files);
         
-        if (selectedFiles.length > 0) {
-            mergeBtn.disabled = false;
-            let listHtml = '<strong>已選擇的檔案：</strong><ul>';
-            selectedFiles.forEach(file => {
-                listHtml += `<li>${file.name}</li>`;
-            });
-            listHtml += '</ul>';
-            fileListEl.innerHTML = listHtml;
-        } else {
-            mergeBtn.disabled = true;
+        newFiles.forEach(file => {
+            const fileId = 'file-' + (fileIdCounter++);
+            fileStore.set(fileId, file);
+            createFileElement(fileId, file.name);
+        });
+
+        // 清空 input，這樣即使再次選同一個檔案也會觸發 change 事件
+        pdfInput.value = '';
+        updateUI();
+    });
+
+    // 建立拖曳列表項目的 HTML
+    function createFileElement(id, name) {
+        const div = document.createElement('div');
+        div.classList.add('file-item');
+        div.setAttribute('draggable', 'true');
+        div.setAttribute('data-id', id);
+        
+        div.innerHTML = `
+            <span class="drag-handle">☰</span>
+            <span class="file-name">${name}</span>
+            <button class="delete-btn" onclick="removeFile('${id}')">✖</button>
+        `;
+
+        // 綁定拖曳事件
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragend', handleDragEnd);
+
+        fileListEl.appendChild(div);
+    }
+
+    // 刪除檔案
+    window.removeFile = function(id) {
+        fileStore.delete(id);
+        const el = document.querySelector(`.file-item[data-id="${id}"]`);
+        if (el) el.remove();
+        updateUI();
+    }
+
+    // 更新介面狀態（判斷按鈕是否可按）
+    function updateUI() {
+        downloadLink.style.display = 'none';
+        statusEl.textContent = '';
+        mergeBtn.disabled = fileStore.size < 2;
+    }
+
+    // --- 拖曳排序邏輯 (Drag and Drop) ---
+    let draggedItem = null;
+
+    function handleDragStart(e) {
+        draggedItem = this;
+        setTimeout(() => this.classList.add('dragging'), 0);
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        draggedItem = null;
+    }
+
+    fileListEl.addEventListener('dragover', (e) => {
+        e.preventDefault(); // 必須阻止預設行為才能允許放置
+        const afterElement = getDragAfterElement(fileListEl, e.clientY);
+        const draggable = document.querySelector('.dragging');
+        if (draggable) {
+            if (afterElement == null) {
+                fileListEl.appendChild(draggable);
+            } else {
+                fileListEl.insertBefore(draggable, afterElement);
+            }
         }
     });
 
-    // 點擊合併按鈕
+    // 計算拖曳時要插入到哪個元素之前
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.file-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            // 計算滑鼠 Y 座標與元素中心點的距離
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+
+    // --- 合併 PDF 邏輯 ---
     mergeBtn.addEventListener('click', async () => {
-        if (selectedFiles.length < 2) {
-            alert('請至少選擇 2 個 PDF 檔案才能進行合併！');
+        // 從目前的 DOM 順序來取得檔案，這樣拖曳排序才會生效
+        const currentElements = document.querySelectorAll('.file-item');
+        const filesToMerge = Array.from(currentElements).map(el => {
+            const id = el.getAttribute('data-id');
+            return fileStore.get(id);
+        });
+
+        if (filesToMerge.length < 2) {
+            alert('請至少準備 2 個 PDF 檔案才能進行合併！');
             return;
         }
 
@@ -177,36 +309,25 @@
         downloadLink.style.display = 'none';
 
         try {
-            // 引入 PDFLib
             const { PDFDocument } = PDFLib;
-            
-            // 創建一個新的空白 PDF
             const mergedPdf = await PDFDocument.create();
 
-            // 依序處理每個上傳的 PDF 檔案
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                // 讀取檔案為 ArrayBuffer
+            for (let i = 0; i < filesToMerge.length; i++) {
+                const file = filesToMerge[i];
                 const arrayBuffer = await file.arrayBuffer();
-                // 載入 PDF
                 const pdf = await PDFDocument.load(arrayBuffer);
-                // 複製每一頁
                 const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                // 將複製的頁面加到新的 PDF 中
                 copiedPages.forEach((page) => {
                     mergedPdf.addPage(page);
                 });
             }
 
-            // 將合併後的 PDF 儲存為 Uint8Array
             const mergedPdfFile = await mergedPdf.save();
-
-            // 將結果轉換為 Blob 並建立下載連結
             const blob = new Blob([mergedPdfFile], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
             downloadLink.href = url;
-            downloadLink.download = `合併文件_${new Date().getTime()}.pdf`; // 自動產生檔名
+            downloadLink.download = `合併文件_${new Date().getTime()}.pdf`; 
             downloadLink.style.display = 'block';
 
             statusEl.style.color = '#27ae60';
