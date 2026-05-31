@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsurTech ESG 永續防災保險模擬平台</title>
+    <!-- 引入 FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-green: #1b4332;
+            --medium-green: #2d6a4f;
+            --light-green: #d8f3dc;
+            --accent-mint: #52b788;
+            --bg-color: #f4f9f4;
+            --text-dark: #2d3748;
+            --warning-yellow: #fff3cd;
+            --warning-orange: #ffe8cc;
+            --warning-red: #f8d7da;
+            --warning-purple: #f3e5f5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 導覽列 */
+        header {
+            background-color: var(--primary-green);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .auth-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-login {
+            background-color: var(--accent-mint);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover {
+            background-color: var(--medium-green);
+        }
+
+        /* 主要內容雙欄配置 */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .column {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: background-color 0.5s ease;
+        }
+
+        /* 左欄樣式：天氣與區域選擇 */
+        .weather-section {
+            border-top: 5px solid var(--medium-green);
+        }
+
+        .selector-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .weather-card {
+            background: linear-gradient(135deg, var(--medium-green), var(--primary-green));
+            color: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 15px;
+        }
+
+        /* 現場模擬控制面板 */
+        .demo-panel {
+            background: #f8fafc;
+            border: 1px dashed var(--accent-mint);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .demo-panel h3 {
+            font-size: 1rem;
+            color: var(--primary-green);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .demo-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .demo-btn:hover, .demo-btn.active {
+            background: var(--light-green);
+            border-color: var(--accent-mint);
+            color: var(--primary-green);
+            font-weight: bold;
+        }
+
+        /* 右欄樣式：保單與計算模擬 */
+        .insurance-section {
+            border-top: 5px solid var(--accent-mint);
+        }
+
+        /* 滑動切換 Bar */
+        .tab-bar {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 30px;
+            padding: 5px;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            color: #64748b;
+        }
+
+        .tab-item.active {
+            background: var(--medium-green);
+            color: white;
+        }
+
+        /* 規則與計算區域 */
+        .rule-box {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 15px;
+            font-size: 0.95rem;
+            border-left: 4px solid var(--medium-green);
+        }
+
+        .rule-box h4 {
+            margin-bottom: 8px;
+            color: var(--primary-green);
+        }
+
+        /* 可編輯規則的行內輸入框 */
+        .rule-input {
+            width: 50px;
+            border: none;
+            border-bottom: 1px dashed var(--text-dark);
+            background: transparent;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #1e293b;
+            outline: none;
+        }
+
+        .rule-input:focus {
+            border-bottom: 2px solid var(--accent-mint);
+            background: white;
+        }
+
+        .premium-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .premium-input-group label {
+            font-weight: bold;
+        }
+
+        .premium-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .premium-input-wrapper span {
+            position: absolute;
+            left: 12px;
+            color: #64748b;
+        }
+
+        .premium-input-wrapper input {
+            width: 100%;
+            padding: 12px 12px 12px 30px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        /* 避險動作 Checkboxes */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .checkbox-item input {
+            margin-top: 4px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--medium-green);
+        }
+
+        /* 計算產出結果卡片 */
+        .result-card {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+
+        .result-title {
+            font-size: 0.9rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .result-val {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--medium-green);
+            margin-top: 5px;
+        }
+
+        /* 右下角 AI 客服聊天室 */
+        .chat-widget {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .chat-btn {
+            width: 60px;
+            height: 60px;
+            background-color: var(--primary-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+        }
+
+        .chat-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .chat-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-header {
+            background: var(--primary-green);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            line-height: 1.4;
+        }
+
+        .msg-bot {
+            background: #e2e8f0;
+            align-self: flex-start;
+        }
+
+        .msg-user {
+            background: var(--light-green);
+            color: var(--primary-green);
+            align-self: flex-end;
+        }
+
+        .chat-input-area {
+            padding: 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .chat-send {
+            background: var(--medium-green);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Firebase 彈出視窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 320px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 15px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .modal-form input {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 導覽列 -->
+    <header>
+        <h1><i class="fa-solid fa-shield-halved"></i> InsurTech ESG 永續防災模擬平台</h1>
+        <div class="auth-container">
+            <span id="user-status" style="font-size: 0.9rem;">訪客模式</span>
+            <button class="btn-login" id="login-trigger-btn" onclick="toggleModal(true)">登入帳戶</button>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <div class="main-container">
+        
+        <!-- 左欄：天氣監測與模擬 -->
+        <div class="column weather-section" id="left-column">
+            <h2><i class="fa-solid fa-cloud-sun-rain"></i> 即時氣象監測</h2>
+            
+            <!-- 區域選擇下拉選單 -->
+            <div class="selector-group">
+                <select id="county-select" onchange="handleCountyChange()">
+                    <option value="">選擇縣市</option>
+                </select>
+                <select id="district-select" onchange="fetchWeather()">
+                    <option value="">選擇行政區</option>
+                </select>
+            </div>
+
+            <!-- 氣象看板 -->
+            <div class="weather-card">
+                <div id="location-display" style="font-size: 1.2rem; font-weight: bold;">請先選擇區域</div>
+                <div class="weather-temp" id="temp-display">--°C</div>
+                <div id="weather-desc">等待資料輸入...</div>
+                <div class="weather-details">
+                    <div><i class="fa-solid fa-droplet"></i> 降雨機率: <span id="pop-display">--%</span></div>
+                    <div><i class="fa-solid fa-wind"></i> 風速: <span id="wind-display">-- m/s</span></div>
+                </div>
+            </div>
+
+            <!-- Demo 現場模擬控制面板 (評審簡報神器) -->
+            <div class="demo-panel">
+                <h3><i class="fa-solid fa-sliders"></i> 現場模擬測試器 (Demo Mode)</h3>
+                <div class="demo-grid">
+                    <button class="demo-btn" onclick="setDemoWeather('temp', 38.5)">模擬 38.5°C 高溫</button>
+                    <button class="demo-btn" onclick="setDemoWeather('rain', 520)">模擬 520mm 暴雨</button>
+                    <button class="demo-btn" onclick="setDemoWeather('wind', 15)">模擬 15 級颶風</button>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button class="demo-btn" onclick="resetToRealtime()" style="width: 100%;">恢復氣象署即時數據</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右欄：保險理賠與動態計算 -->
+        <div class="column insurance-section" id="right-column">
+            <h2><i class="fa-solid fa-calculator"></i> 動態避險與保費試算</h2>
+            
+            <!-- 三個選項切換 Bar -->
+            <div class="tab-bar">
+                <div class="tab-item active" onclick="switchTab('temp')" id="tab-temp">氣溫避險</div>
+                <div class="tab-item" onclick="switchTab('rain')" id="tab-rain">雨量避險</div>
+                <div class="tab-item" onclick="switchTab('wind')" id="tab-wind">風速避險</div>
+            </div>
+
+            <!-- 保費輸入 -->
+            <div class="premium-input-group">
+                <label for="premium-amount">基本保費金額 (新台幣)</label>
+                <div class="premium-input-wrapper">
+                    <span>$</span>
+                    <input type="number" id="premium-amount" value="10000" oninput="calculateIncentive()">
+                </div>
+            </div>
+
+            <!-- 動態可編輯規則區 -->
+            <div class="rule-box">
+                <div id="rule-content">
+                    <!-- 內容由 JS 依據 Tab 動態注入 -->
+                </div>
+            </div>
+
+            <!-- 避險動作 Checkboxes (動態更換項目) -->
+            <div class="checkbox-group">
+                <h4 style="color: var(--medium-green);">請確認已執行的避險動作：</h4>
+                <div id="checkboxes-container">
+                    <!-- 由 JS 動態生成項目 -->
+                </div>
+            </div>
+
+            <!-- 計算結果 -->
+            <div class="result-card">
+                <div class="result-title">動態精算與防災回饋</div>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div>下次保費可折抵</div>
+                        <div class="result-val" id="discount-val">$0</div>
+                    </div>
+                    <div class="result-item">
+                        <div>獲得防災點數</div>
+                        <div class="result-val" id="points-val">0 點</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; font-size: 0.85rem; color: #64748b;" id="calculation-formula-desc">
+                    請輸入保費並勾選避險動作以進行精算。
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 右下角 AI 客服聊天室 -->
+    <div class="chat-widget">
+        <div class="chat-btn" onclick="toggleChat()"><i class="fa-solid fa-robot"></i></div>
+        <div class="chat-window" id="chat-window">
+            <div class="chat-header">
+                <span><i class="fa-solid fa-shield-halved"></i> 智能防災客服 (Qwen 2.5)</span>
+                <span style="cursor:pointer;" onclick="toggleChat()">✕</span>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message msg-bot">您好！我是您的防災保險助理。當前系統與本地 Ollama 服務連接中。您可以詢問我防災技巧或保費折抵規則！</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chat-input" placeholder="輸入您的訊息..." onkeypress="handleChatPress(event)">
+                <button class="chat-send" onclick="sendChatMessage()">發送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase 登入 Modal (無實際後端，留空給您之後串接) -->
+    <div class="modal" id="login-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="toggleModal(false)">✕</span>
+            <h3 style="color: var(--primary-green);"><i class="fa-solid fa-user-shield"></i> 保戶登入模擬</h3>
+            <div class="modal-form">
+                <input type="email" id="login-email" placeholder="電子信箱">
+                <input type="password" id="login-pass" placeholder="密碼">
+                <button class="btn-login" onclick="simulateLogin()">確認登入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 邏輯控制 -->
+    <script>
+        // ==========================================
+        // 1. 本地氣象署與行政區數據結構 (預先建立主要縣市範本，可自行補齊)
+        // ==========================================
+        const TW_DATA = {
+            "臺北市": {
+                apiCode: "F-D0047-061",
+                districts: ["中正區", "大安區", "信義區", "中山區", "松山區", "萬華區", "文山區", "士林區", "北投區", "內湖區", "南港區", "大同區"]
+            },
+            "新北市": {
+                apiCode: "F-D0047-069",
+                districts: ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區"]
+            },
+            "臺中市": {
+                apiCode: "F-D0047-073",
+                districts: ["西屯區", "北屯區", "南屯區", "中區", "東區", "南區", "西區", "北區", "豐原區", "大里區", "太平區"]
+            },
+            "高雄市": {
+                apiCode: "F-D0047-077",
+                districts: ["新興區", "前金區", "苓雅區", "鹽埕區", "鼓山區", "旗津區", "前鎮區", "三民區", "楠梓區", "小港區", "左營區"]
+            }
+        };
+
+        // ==========================================
+        // 2. 初始化與 API 設定
+        // ==========================================
+        // ⚠️ 請在此填入您的氣象署授權碼（Authorization碼）
+        const CWA_API_KEY = "YOUR_CWA_API_KEY_HERE"; 
+        
+        let currentTab = 'temp'; 
+        let activeWeatherData = {
+            temp: 25,
+            rain: 10,  // 降雨機率或雨量
+            wind: 3
+        };
+        let isDemoMode = false;
+
+        // 可編輯之規則預設參數
+        const RULES_CONFIG = {
+            temp: {
+                yellow_threshold: 36, yellow_rate: 0.01,
+                orange_threshold: 37, orange_rate: 0.05,
+                red_threshold: 38, red_rate: 0.1
+            },
+            rain: {
+                purple_threshold: 500, purple_rate: 0.25,
+                red_threshold: 350, red_rate: 0.20,
+                orange_threshold: 200, orange_rate: 0.15,
+                yellow_threshold: 80, yellow_rate: 0.10
+            },
+            wind: {
+                yellow_wind: 6, yellow_gust: 8, yellow_rate: 0.05,
+                orange_wind: 9, orange_gust: 11, orange_rate: 0.10,
+                red_wind: 12, red_gust: 14, red_rate: 0.20
+            }
+        };
+
+        // 避險動作清單
+        const MITIGATION_ITEMS = {
+            temp: [
+                { id: "t1", text: "已開啟廠區屋頂/外牆灑水降溫系統" },
+                { id: "t2", text: "已啟用節能通風空調系統並監測用電負載" }
+            ],
+            rain: [
+                { id: "r1", text: "一樓門市/倉庫已裝設防水閘門或堆疊防汛沙包" },
+                { id: "r2", text: "已將一樓高單價貨物/庫存移至高處 (二樓以上)" },
+                { id: "r3", text: "高風險泡水車輛已移至高處避難停車場" }
+            ],
+            wind: [
+                { id: "w1", text: "室外廣告招牌、帆布、排風管已完成補強或收合" },
+                { id: "w2", text: "玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門" }
+            ]
+        };
+
+        window.onload = function() {
+            initSelectors();
+            switchTab('temp');
+        };
+
+        // 建立縣市下拉選單
+        function initSelectors() {
+            const countySel = document.getElementById("county-select");
+            for (let county in TW_DATA) {
+                let opt = document.createElement("option");
+                opt.value = county;
+                opt.innerHTML = county;
+                countySel.appendChild(opt);
+            }
+        }
+
+        function handleCountyChange() {
+            const county = document.getElementById("county-select").value;
+            const distSel = document.getElementById("district-select");
+            distSel.innerHTML = '<option value="">選擇行政區</option>';
+            
+            if (county && TW_DATA[county]) {
+                TW_DATA[county].districts.forEach(dist => {
+                    let opt = document.createElement("option");
+                    opt.value = dist;
+                    opt.innerHTML = dist;
+                    distSel.appendChild(opt);
+                });
+            }
+        }
+
+        // ==========================================
+        // 3. 氣象數據處理邏輯 (API 與 Demo 雙軌)
+        // ==========================================
+        async function fetchWeather() {
+            if (isDemoMode) return; // 模擬模式下不讀取真實氣候
+
+            const county = document.getElementById("county-select").value;
+            const district = document.getElementById("district-select").value;
+
+            if (!county || !district) return;
+
+            document.getElementById("location-display").innerText = `${county} ${district}`;
+            document.getElementById("weather-desc").innerText = "資料載入中...";
+
+            // 防呆 fallback 機制：若無填寫 API key 則自動啟動預設安全模擬
+            if (CWA_API_KEY === "YOUR_CWA_API_KEY_HERE" || CWA_API_KEY === "") {
+                console.warn("未偵測到有效的中央氣象署 API Key，已為您自動啟用模擬即時天氣。");
+                simulateFallbackWeather(county, district);
+                return;
+            }
+
+            const apiCode = TW_DATA[county].apiCode;
+            const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${apiCode}?Authorization=${CWA_API_KEY}&locationName=${encodeURIComponent(district)}&elementName=T,PoP12h,WD`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success === "true") {
+                    const elements = data.records.locations[0].location[0].weatherElement;
+                    
+                    // 解析溫度 T
+                    const tempVal = parseFloat(elements.find(el => el.elementName === "T").time[0].elementValue[0].value);
+                    // 解析降雨機率 PoP12h
+                    const popVal = parseFloat(elements.find(el => el.elementName === "PoP12h").time[0].elementValue[0].value || 0);
+                    // 解析風速
+                    const windDesc = elements.find(el => el.elementName === "WD").time[0].elementValue[0].value || "0";
+                    const windVal = parseFloat(windDesc.replace(/[^0-9.]/g, '')) || 3; 
+
+                    activeWeatherData = { temp: tempVal, rain: popVal, wind: windVal };
+                    
+                    updateWeatherUI(tempVal, popVal, windVal, "來自氣象署即時預報");
+                    evaluateWeatherTierAndColor();
+                } else {
+                    throw new Error("API 回傳異常");
+                }
+            } catch (err) {
+                console.error("API 連線失敗，啟動備用模擬機制：", err);
+                simulateFallbackWeather(county, district);
+            }
+        }
+
+        // 氣象署 API Fallback 機制 (讓簡報不破功)
+        function simulateFallbackWeather(county, district) {
+            // 提供合理的隨機天氣數據
+            const mockTemp = (24 + Math.random() * 8).toFixed(1);
+            const mockPop = Math.floor(Math.random() * 100);
+            const mockWind = (1 + Math.random() * 5).toFixed(1);
+
+            activeWeatherData = { temp: parseFloat(mockTemp), rain: mockPop, wind: parseFloat(mockWind) };
+            
+            updateWeatherUI(mockTemp, mockPop, mockWind, "即時模擬數據 (請確認API金鑰)");
+            evaluateWeatherTierAndColor();
+        }
+
+        function updateWeatherUI(temp, rain, wind, sourceTag) {
+            document.getElementById("temp-display").innerText = `${temp}°C`;
+            document.getElementById("pop-display").innerText = `${rain}%`;
+            document.getElementById("wind-display").innerText = `${wind} m/s`;
+            document.getElementById("weather-desc").innerText = `狀態：${sourceTag}`;
+        }
+
+        // ==========================================
+        // 4. DEMO 現場手動模擬功能
+        // ==========================================
+        function setDemoWeather(type, value) {
+            isDemoMode = true;
+            document.querySelectorAll(".demo-btn").forEach(btn => btn.classList.remove("active"));
+            
+            // 標示目前正在模擬的天氣按鈕
+            event.target.classList.add("active");
+
+            if (type === 'temp') activeWeatherData.temp = value;
+            if (type === 'rain') activeWeatherData.rain = value; // 暴雨毫米
+            if (type === 'wind') activeWeatherData.wind = value;
+
+            document.getElementById("location-display").innerText = "⚠️ 測試控制模式中";
+            updateWeatherUI(activeWeatherData.temp, activeWeatherData.rain, activeWeatherData.wind, "手動覆寫模擬數據");
+            
+            // 同步切換右側相對應的 Tab
+            switchTab(type);
+            evaluateWeatherTierAndColor();
+        }
+
+        function resetToRealtime() {
+            isDemoMode = false;
+            document.querySelectorAll(".demo-btn").forEach(btn => btn.classList.remove("active"));
+            const county = document.getElementById("county-select").value;
+            if (county) {
+                fetchWeather();
+            } else {
+                document.getElementById("location-display").innerText = "請先選擇區域";
+            }
+        }
+
+        // ==========================================
+        // 5. 右側保險精算與動態顏色演算
+        // ==========================================
+        function switchTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll(".tab-item").forEach(item => item.classList.remove("active"));
+            document.getElementById(`tab-${tabName}`).classList.add("active");
+
+            renderRules();
+            renderCheckboxes();
+            evaluateWeatherTierAndColor();
+        }
+
+        // 動態生成可編輯規則
+        function renderRules() {
+            const ruleDiv = document.getElementById("rule-content");
+            if (currentTab === 'temp') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-temperature-high"></i> 溫度判定與防災折扣規則：</h4>
+                    <ul>
+                        <li>🔴 紅色：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-rr" value="${RULES_CONFIG.temp.red_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
+                        <li>🟠 橘色：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-or" value="${RULES_CONFIG.temp.orange_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
+                        <li>🟡 黃色：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-yr" value="${RULES_CONFIG.temp.yellow_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
+                    </ul>
+                `;
+            } else if (currentTab === 'rain') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-cloud-showers-heavy"></i> 累積雨量與防災折扣規則：</h4>
+                    <ul>
+                        <li>🟣 紫色 (超大豪雨)：雨量達 <input type="number" id="cfg-rain-p" value="${RULES_CONFIG.rain.purple_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-pr" value="${RULES_CONFIG.rain.purple_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🔴 紅色 (大豪雨)：雨量達 <input type="number" id="cfg-rain-r" value="${RULES_CONFIG.rain.red_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-rr" value="${RULES_CONFIG.rain.red_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🟠 橘色 (豪雨)：雨量達 <input type="number" id="cfg-rain-o" value="${RULES_CONFIG.rain.orange_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-or" value="${RULES_CONFIG.rain.orange_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🟡 黃色 (大雨)：雨量達 <input type="number" id="cfg-rain-y" value="${RULES_CONFIG.rain.yellow_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-yr" value="${RULES_CONFIG.rain.yellow_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                    </ul>
+                `;
+            } else if (currentTab === 'wind') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-wind"></i> 風速判定與防災折扣規則：</h4>
+                    <ul>
+                        <li>🔴 紅色 (12級風)：平均風速 <input type="number" id="cfg-wind-rw" value="${RULES_CONFIG.wind.red_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${RULES_CONFIG.wind.red_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟠 橘色 (9級風)：平均風速 <input type="number" id="cfg-wind-ow" value="${RULES_CONFIG.wind.orange_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${RULES_CONFIG.wind.orange_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟡 黃色 (6級風)：平均風速 <input type="number" id="cfg-wind-yw" value="${RULES_CONFIG.wind.yellow_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${RULES_CONFIG.wind.yellow_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                    </ul>
+                `;
+            }
+        }
+
+        // 更新使用者當前修改的規則參數
+        function updateConfig(type) {
+            if (type === 'temp') {
+                RULES_CONFIG.temp.red_threshold = parseFloat(document.getElementById("cfg-temp-r").value);
+                RULES_CONFIG.temp.red_rate = parseFloat(document.getElementById("cfg-temp-rr").value) / 100;
+                RULES_CONFIG.temp.orange_threshold = parseFloat(document.getElementById("cfg-temp-o").value);
+                RULES_CONFIG.temp.orange_rate = parseFloat(document.getElementById("cfg-temp-or").value) / 100;
+                RULES_CONFIG.temp.yellow_threshold = parseFloat(document.getElementById("cfg-temp-y").value);
+                RULES_CONFIG.temp.yellow_rate = parseFloat(document.getElementById("cfg-temp-yr").value) / 100;
+            } else if (type === 'rain') {
+                RULES_CONFIG.rain.purple_threshold = parseFloat(document.getElementById("cfg-rain-p").value);
+                RULES_CONFIG.rain.purple_rate = parseFloat(document.getElementById("cfg-rain-pr").value) / 100;
+                RULES_CONFIG.rain.red_threshold = parseFloat(document.getElementById("cfg-rain-r").value);
+                RULES_CONFIG.rain.red_rate = parseFloat(document.getElementById("cfg-rain-rr").value) / 100;
+                RULES_CONFIG.rain.orange_threshold = parseFloat(document.getElementById("cfg-rain-o").value);
+                RULES_CONFIG.rain.orange_rate = parseFloat(document.getElementById("cfg-rain-or").value) / 100;
+                RULES_CONFIG.rain.yellow_threshold = parseFloat(document.getElementById("cfg-rain-y").value);
+                RULES_CONFIG.rain.yellow_rate = parseFloat(document.getElementById("cfg-rain-yr").value) / 100;
+            } else if (type === 'wind') {
+                RULES_CONFIG.wind.red_wind = parseFloat(document.getElementById("cfg-wind-rw").value);
+                RULES_CONFIG.wind.red_rate = parseFloat(document.getElementById("cfg-wind-rr").value) / 100;
+                RULES_CONFIG.wind.orange_wind = parseFloat(document.getElementById("cfg-wind-ow").value);
+                RULES_CONFIG.wind.orange_rate = parseFloat(document.getElementById("cfg-wind-or").value) / 100;
+                RULES_CONFIG.wind.yellow_wind = parseFloat(document.getElementById("cfg-wind-yw").value);
+                RULES_CONFIG.wind.yellow_rate = parseFloat(document.getElementById("cfg-wind-yr").value) / 100;
+            }
+            evaluateWeatherTierAndColor();
+        }
+
+        // 動態生成避險 checkboxes
+        function renderCheckboxes() {
+            const container = document.getElementById("checkboxes-container");
+            container.innerHTML = "";
+            MITIGATION_ITEMS[currentTab].forEach(item => {
+                let label = document.createElement("label");
+                label.className = "checkbox-item";
+                label.innerHTML = `
+                    <input type="checkbox" id="${item.id}" onchange="calculateIncentive()">
+                    <span>${item.text}</span>
+                `;
+                container.appendChild(label);
+            });
+        }
+
+        // 核心邏輯：判斷目前天氣落在哪個燈號，並更新右側底色
+        let currentActiveTier = null; // 'yellow', 'orange', 'red', 'purple', null
+        let currentRate = 0;
+
+        function evaluateWeatherTierAndColor() {
+            const rightColumn = document.getElementById("right-column");
+            rightColumn.style.backgroundColor = "white"; // 預設白
+            currentActiveTier = null;
+            currentRate = 0;
+
+            if (currentTab === 'temp') {
+                const t = activeWeatherData.temp;
+                if (t >= RULES_CONFIG.temp.red_threshold) {
+                    currentActiveTier = 'red';
+                    currentRate = RULES_CONFIG.temp.red_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-red)";
+                } else if (t >= RULES_CONFIG.temp.orange_threshold) {
+                    currentActiveTier = 'orange';
+                    currentRate = RULES_CONFIG.temp.orange_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-orange)";
+                } else if (t >= RULES_CONFIG.temp.yellow_threshold) {
+                    currentActiveTier = 'yellow';
+                    currentRate = RULES_CONFIG.temp.yellow_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-yellow)";
+                }
+            } else if (currentTab === 'rain') {
+                const r = activeWeatherData.rain;
+                if (r >= RULES_CONFIG.rain.purple_threshold) {
+                    currentActiveTier = 'purple';
+                    currentRate = RULES_CONFIG.rain.purple_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-purple)";
+                } else if (r >= RULES_CONFIG.rain.red_threshold) {
+                    currentActiveTier = 'red';
+                    currentRate = RULES_CONFIG.rain.red_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-red)";
+                } else if (r >= RULES_CONFIG.rain.orange_threshold) {
+                    currentActiveTier = 'orange';
+                    currentRate = RULES_CONFIG.rain.orange_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-orange)";
+                } else if (r >= RULES_CONFIG.rain.yellow_threshold) {
+                    currentActiveTier = 'yellow';
+                    currentRate = RULES_CONFIG.rain.yellow_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-yellow)";
+                }
+            } else if (currentTab === 'wind') {
+                const w = activeWeatherData.wind;
+                if (w >= RULES_CONFIG.wind.red_wind) {
+                    currentActiveTier = 'red';
+                    currentRate = RULES_CONFIG.wind.red_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-red)";
+                } else if (w >= RULES_CONFIG.wind.orange_wind) {
+                    currentActiveTier = 'orange';
+                    currentRate = RULES_CONFIG.wind.orange_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-orange)";
+                } else if (w >= RULES_CONFIG.wind.yellow_wind) {
+                    currentActiveTier = 'yellow';
+                    currentRate = RULES_CONFIG.wind.yellow_rate;
+                    rightColumn.style.backgroundColor = "var(--warning-yellow)";
+                }
+            }
+
+            calculateIncentive();
+        }
+
+        // 精算保費折抵與防災點數
+        function calculateIncentive() {
+            const premium = parseFloat(document.getElementById("premium-amount").value) || 0;
+            
+            // 檢查避險動作是否至少勾選一項 (可視需求調整為必須全勾)
+            const checkboxes = document.querySelectorAll("#checkboxes-container input[type='checkbox']");
+            let isMitigated = false;
+            checkboxes.forEach(cb => {
+                if (cb.checked) isMitigated = true;
+            });
+
+            const discountEl = document.getElementById("discount-val");
+            const pointsEl = document.getElementById("points-val");
+            const formulaDesc = document.getElementById("calculation-formula-desc");
+
+            if (!currentActiveTier) {
+                discountEl.innerText = "$0";
+                pointsEl.innerText = "0 點";
+                formulaDesc.innerText = "當前天氣未達防災警戒閥值，暫不符合折抵資格。";
+                return;
+            }
+
+            if (!isMitigated) {
+                discountEl.innerText = "$0";
+                pointsEl.innerText = "0 點";
+                formulaDesc.innerText = `🚨 偵測到當前氣候已達 [${currentActiveTier.toUpperCase()}] 等級警報！請勾選下方避險完成動作，即可獲取 ${(currentRate * 100).toFixed(2)}% 折抵。`;
+                return;
+            }
+
+            // 雙條件符合：計算折抵
+            const discountAmount = Math.round(premium * currentRate);
+            const pointsAwarded = Math.round(premium * currentRate); // 1元等值1點
+
+            discountEl.innerText = `$${discountAmount}`;
+            pointsEl.innerText = `${pointsAwarded} 點`;
+            formulaDesc.innerHTML = `✅ <strong>防災條件成立：</strong> 警戒燈號達 [${currentActiveTier.toUpperCase()}]，且保戶已採取主動避險。計算公式：$${premium} × ${(currentRate * 100).toFixed(2)}% = <strong>$${discountAmount}</strong> 元。`;
+        }
+
+        // ==========================================
+        // 6. 本地 OLLAMA QWEN 2.5 AI 客服邏輯
+        // ==========================================
+        function toggleChat() {
+            const chatWin = document.getElementById("chat-window");
+            chatWin.style.display = (chatWin.style.display === "flex") ? "none" : "flex";
+        }
+
+        function handleChatPress(event) {
+            if (event.key === 'Enter') sendChatMessage();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById("chat-input");
+            const query = input.value.trim();
+            if (!query) return;
+
+            appendMessage("msg-user", query);
+            input.value = "";
+
+            // 顯示正在輸入
+            const loadingId = appendMessage("msg-bot", "系統分析中...");
+
+            try {
+                // 串接本地端 Ollama API
+                const response = await fetch("http://localhost:11434/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "qwen2.5:7b",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "你是一位專精於永續防災保險、ESG減損、綠色科技的智能客服助理。請以繁體中文友善、簡短扼要回答保戶問題，強調主動防災對永續環境與保費折抵的好處。"
+                            },
+                            { role: "user", content: query }
+                        ],
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).innerText = data.message.content;
+            } catch (err) {
+                console.error("無法連線至本地 Ollama，請確認是否執行 `ollama run qwen2.5:7b` 並開啟 CORS 權限限制。", err);
+                document.getElementById(loadingId).innerText = "【Demo 備用回覆】當前 AI 未偵測到本機 Ollama (qwen2.5:7b) 運作，請確保您在電腦命令列已啟動服務並設置 OLLAMA_ORIGINS=\"*\"。此功能在實機部署時，保戶可諮詢智慧減損建議。";
+            }
+        }
+
+        function appendMessage(className, text) {
+            const container = document.getElementById("chat-messages");
+            const msg = document.createElement("div");
+            msg.className = `message ${className}`;
+            const msgId = "msg-" + Date.now();
+            msg.id = msgId;
+            msg.innerText = text;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+            return msgId;
+        }
+
+        // ==========================================
+        // 7. FIREBASE 登入模擬
+        // ==========================================
+        function toggleModal(show) {
+            document.getElementById("login-modal").style.display = show ? "flex" : "none";
+        }
+
+        function simulateLogin() {
+            const email = document.getElementById("login-email").value;
+            if (email) {
+                document.getElementById("user-status").innerText = `🔑 已登入: ${email}`;
+                document.getElementById("login-trigger-btn").innerText = "登出";
+                document.getElementById("login-trigger-btn").setAttribute("onclick", "simulateLogout()");
+            }
+            toggleModal(false);
+        }
+
+        function simulateLogout() {
+            document.getElementById("user-status").innerText = `訪客模式`;
+            document.getElementById("login-trigger-btn").innerText = "登入帳戶";
+            document.getElementById("login-trigger-btn").setAttribute("onclick", "toggleModal(true)");
+        }
+    </script>
+</body>
+</html>
