@@ -37,10 +37,11 @@
             --accent-mint: #52b788;
             --bg-color: #f4f9f4;
             --text-dark: #2d3748;
-            --warning-yellow: #fff3cd;
-            --warning-orange: #ffe8cc;
-            --warning-red: #f8d7da;
-            --warning-purple: #f3e5f5;
+             /* 🌟 [修改處] 加重警報呈現底色，讓視覺對比更強烈 */
+            --warning-yellow: #ffe066; /* 飽和金黃 */
+            --warning-orange: #ffb84d; /* 飽和橘黃 */
+            --warning-red: #ff8787;    /* 飽和亮紅 */
+            --warning-purple: #da77f2; /* 飽和亮紫 */
         }
 
         * {
@@ -793,23 +794,27 @@
         };
         let isDemoMode = false;
 
-        // 可編輯之規則預設參數
+        // 🌟 [修改處] 修正預設折抵比例 (0.1%、0.05%、0.01% 等) 
+        // 並且為雨量與風速導入「雙重閥值」規則配置
         const RULES_CONFIG = {
             temp: {
-                yellow_threshold: 36, yellow_rate: 0.01,
-                orange_threshold: 37, orange_rate: 0.05,
-                red_threshold: 38, red_rate: 0.1
+                yellow_threshold: 36, yellow_rate: 0.0001, // 0.01%
+                orange_threshold: 37, orange_rate: 0.0005, // 0.05%
+                red_threshold: 38, red_rate: 0.0010        // 0.1%
             },
             rain: {
-                purple_threshold: 500, purple_rate: 0.25,
-                red_threshold: 350, red_rate: 0.20,
-                orange_threshold: 200, orange_rate: 0.15,
-                yellow_threshold: 80, yellow_rate: 0.10
+                purple_threshold_24h: 500, purple_rate: 0.0025, // 0.25%
+                
+                red_threshold_24h: 350, red_threshold_3h: 200, red_rate: 0.0020, // 0.20%
+                
+                orange_threshold_24h: 200, orange_threshold_3h: 100, orange_rate: 0.0015, // 0.15%
+                
+                yellow_threshold_24h: 80, yellow_threshold_1h: 40, yellow_rate: 0.0010 // 0.10%
             },
             wind: {
-                yellow_wind: 6, yellow_gust: 8, yellow_rate: 0.05,
-                orange_wind: 9, orange_gust: 11, orange_rate: 0.10,
-                red_wind: 12, red_gust: 14, red_rate: 0.20
+                yellow_mean: 6, yellow_gust: 8, yellow_rate: 0.0005,  // 0.05%
+                orange_mean: 9, orange_gust: 11, orange_rate: 0.0010, // 0.10%
+                red_mean: 12, red_gust: 14, red_rate: 0.0020          // 0.20%
             }
         };
 
@@ -1059,34 +1064,40 @@
             evaluateWeatherTierAndColor();
         }
 
+        // 🌟 [修改處] 完整寫出中央氣象署定義之雙重閥值規則，並保持可即時編輯
         function renderRules() {
             const ruleDiv = document.getElementById("rule-content");
             if (currentTab === 'temp') {
                 ruleDiv.innerHTML = `
                     <h4><i class="fa-solid fa-temperature-high"></i> 溫度判定與折扣規則 (可直接修改)：</h4>
                     <ul>
-                        <li>🔴 紅色：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-rr" value="${RULES_CONFIG.temp.red_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
-                        <li>🟠 橘色：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-or" value="${RULES_CONFIG.temp.orange_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
-                        <li>🟡 黃色：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-yr" value="${RULES_CONFIG.temp.yellow_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🔴 紅色燈號：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-rr" value="${(RULES_CONFIG.temp.red_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟠 橘色燈號：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-or" value="${(RULES_CONFIG.temp.orange_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟡 黃色燈號：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-yr" value="${(RULES_CONFIG.temp.yellow_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
                     </ul>
                 `;
             } else if (currentTab === 'rain') {
                 ruleDiv.innerHTML = `
                     <h4><i class="fa-solid fa-cloud-showers-heavy"></i> 累積雨量與折扣規則 (可直接修改)：</h4>
                     <ul>
-                        <li>🟣 紫色 (超大豪雨)：雨量達 <input type="number" id="cfg-rain-p" value="${RULES_CONFIG.rain.purple_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-pr" value="${RULES_CONFIG.rain.purple_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
-                        <li>🔴 紅色 (大豪雨)：雨量達 <input type="number" id="cfg-rain-r" value="${RULES_CONFIG.rain.red_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-rr" value="${RULES_CONFIG.rain.red_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
-                        <li>🟠 橘色 (豪雨)：雨量達 <input type="number" id="cfg-rain-o" value="${RULES_CONFIG.rain.orange_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-or" value="${RULES_CONFIG.rain.orange_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
-                        <li>🟡 黃色 (大雨)：雨量達 <input type="number" id="cfg-rain-y" value="${RULES_CONFIG.rain.yellow_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-yr" value="${RULES_CONFIG.rain.yellow_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🟣 紫色 (超大豪雨)：24小時雨量達 <input type="number" id="cfg-rain-p-24h" value="${RULES_CONFIG.rain.purple_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-pr" value="${(RULES_CONFIG.rain.purple_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        
+                        <li>🔴 紅色 (大豪雨)：24小時雨量達 <input type="number" id="cfg-rain-r-24h" value="${RULES_CONFIG.rain.red_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 3小時雨量達 <input type="number" id="cfg-rain-r-3h" value="${RULES_CONFIG.rain.red_threshold_3h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-rr" value="${(RULES_CONFIG.rain.red_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        
+                        <li>🟠 橘色 (豪雨)：24小時雨量達 <input type="number" id="cfg-rain-o-24h" value="${RULES_CONFIG.rain.orange_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 3小時雨量達 <input type="number" id="cfg-rain-o-3h" value="${RULES_CONFIG.rain.orange_threshold_3h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-or" value="${(RULES_CONFIG.rain.orange_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        
+                        <li>🟡 黃色 (大雨)：24小時雨量達 <input type="number" id="cfg-rain-y-24h" value="${RULES_CONFIG.rain.yellow_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 1小時雨量達 <input type="number" id="cfg-rain-y-1h" value="${RULES_CONFIG.rain.yellow_threshold_1h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-yr" value="${(RULES_CONFIG.rain.yellow_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
                     </ul>
                 `;
             } else if (currentTab === 'wind') {
                 ruleDiv.innerHTML = `
                     <h4><i class="fa-solid fa-wind"></i> 風速判定與折扣規則 (可直接修改)：</h4>
                     <ul>
-                        <li>🔴 紅色：風速達 <input type="number" id="cfg-wind-rw" value="${RULES_CONFIG.wind.red_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${RULES_CONFIG.wind.red_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
-                        <li>🟠 橘色：風速達 <input type="number" id="cfg-wind-ow" value="${RULES_CONFIG.wind.orange_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${RULES_CONFIG.wind.orange_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
-                        <li>🟡 黃色：風速達 <input type="number" id="cfg-wind-yw" value="${RULES_CONFIG.wind.yellow_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${RULES_CONFIG.wind.yellow_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🔴 紅色燈號：平均風速達 <input type="number" id="cfg-wind-rm" value="${RULES_CONFIG.wind.red_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-rg" value="${RULES_CONFIG.wind.red_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${(RULES_CONFIG.wind.red_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        
+                        <li>🟠 橙色燈號：平均風速達 <input type="number" id="cfg-wind-om" value="${RULES_CONFIG.wind.orange_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-og" value="${RULES_CONFIG.wind.orange_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${(RULES_CONFIG.wind.orange_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        
+                        <li>🟡 黃色燈號：平均風速達 <input type="number" id="cfg-wind-ym" value="${RULES_CONFIG.wind.yellow_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-yg" value="${RULES_CONFIG.wind.yellow_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${(RULES_CONFIG.wind.yellow_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
                     </ul>
                 `;
             }
@@ -1094,28 +1105,39 @@
 
         function updateConfig(type) {
             if (type === 'temp') {
-                RULES_CONFIG.temp.red_threshold = parseFloat(document.getElementById("cfg-temp-r").value);
-                RULES_CONFIG.temp.red_rate = parseFloat(document.getElementById("cfg-temp-rr").value) / 100;
-                RULES_CONFIG.temp.orange_threshold = parseFloat(document.getElementById("cfg-temp-o").value);
-                RULES_CONFIG.temp.orange_rate = parseFloat(document.getElementById("cfg-temp-or").value) / 100;
-                RULES_CONFIG.temp.yellow_threshold = parseFloat(document.getElementById("cfg-temp-y").value);
-                RULES_CONFIG.temp.yellow_rate = parseFloat(document.getElementById("cfg-temp-yr").value) / 100;
+                RULES_CONFIG.temp.red_threshold = parseFloat(document.getElementById("cfg-temp-r").value) || 0;
+                RULES_CONFIG.temp.red_rate = (parseFloat(document.getElementById("cfg-temp-rr").value) || 0) / 100;
+                RULES_CONFIG.temp.orange_threshold = parseFloat(document.getElementById("cfg-temp-o").value) || 0;
+                RULES_CONFIG.temp.orange_rate = (parseFloat(document.getElementById("cfg-temp-or").value) || 0) / 100;
+                RULES_CONFIG.temp.yellow_threshold = parseFloat(document.getElementById("cfg-temp-y").value) || 0;
+                RULES_CONFIG.temp.yellow_rate = (parseFloat(document.getElementById("cfg-temp-yr").value) || 0) / 100;
             } else if (type === 'rain') {
-                RULES_CONFIG.rain.purple_threshold = parseFloat(document.getElementById("cfg-rain-p").value);
-                RULES_CONFIG.rain.purple_rate = parseFloat(document.getElementById("cfg-rain-pr").value) / 100;
-                RULES_CONFIG.rain.red_threshold = parseFloat(document.getElementById("cfg-rain-r").value);
-                RULES_CONFIG.rain.red_rate = parseFloat(document.getElementById("cfg-rain-rr").value) / 100;
-                RULES_CONFIG.rain.orange_threshold = parseFloat(document.getElementById("cfg-rain-o").value);
-                RULES_CONFIG.rain.orange_rate = parseFloat(document.getElementById("cfg-rain-or").value) / 100;
-                RULES_CONFIG.rain.yellow_threshold = parseFloat(document.getElementById("cfg-rain-y").value);
-                RULES_CONFIG.rain.yellow_rate = parseFloat(document.getElementById("cfg-rain-yr").value) / 100;
+                RULES_CONFIG.rain.purple_threshold_24h = parseFloat(document.getElementById("cfg-rain-p-24h").value) || 0;
+                RULES_CONFIG.rain.purple_rate = (parseFloat(document.getElementById("cfg-rain-pr").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.red_threshold_24h = parseFloat(document.getElementById("cfg-rain-r-24h").value) || 0;
+                RULES_CONFIG.rain.red_threshold_3h = parseFloat(document.getElementById("cfg-rain-r-3h").value) || 0;
+                RULES_CONFIG.rain.red_rate = (parseFloat(document.getElementById("cfg-rain-rr").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.orange_threshold_24h = parseFloat(document.getElementById("cfg-rain-o-24h").value) || 0;
+                RULES_CONFIG.rain.orange_threshold_3h = parseFloat(document.getElementById("cfg-rain-o-3h").value) || 0;
+                RULES_CONFIG.rain.orange_rate = (parseFloat(document.getElementById("cfg-rain-or").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.yellow_threshold_24h = parseFloat(document.getElementById("cfg-rain-y-24h").value) || 0;
+                RULES_CONFIG.rain.yellow_threshold_1h = parseFloat(document.getElementById("cfg-rain-y-1h").value) || 0;
+                RULES_CONFIG.rain.yellow_rate = (parseFloat(document.getElementById("cfg-rain-yr").value) || 0) / 100;
             } else if (type === 'wind') {
-                RULES_CONFIG.wind.red_wind = parseFloat(document.getElementById("cfg-wind-rw").value);
-                RULES_CONFIG.wind.red_rate = parseFloat(document.getElementById("cfg-wind-rr").value) / 100;
-                RULES_CONFIG.wind.orange_wind = parseFloat(document.getElementById("cfg-wind-ow").value);
-                RULES_CONFIG.wind.orange_rate = parseFloat(document.getElementById("cfg-wind-or").value) / 100;
-                RULES_CONFIG.wind.yellow_wind = parseFloat(document.getElementById("cfg-wind-yw").value);
-                RULES_CONFIG.wind.yellow_rate = parseFloat(document.getElementById("cfg-wind-yr").value) / 100;
+                RULES_CONFIG.wind.red_mean = parseFloat(document.getElementById("cfg-wind-rm").value) || 0;
+                RULES_CONFIG.wind.red_gust = parseFloat(document.getElementById("cfg-wind-rg").value) || 0;
+                RULES_CONFIG.wind.red_rate = (parseFloat(document.getElementById("cfg-wind-rr").value) || 0) / 100;
+                
+                RULES_CONFIG.wind.orange_mean = parseFloat(document.getElementById("cfg-wind-om").value) || 0;
+                RULES_CONFIG.wind.orange_gust = parseFloat(document.getElementById("cfg-wind-og").value) || 0;
+                RULES_CONFIG.wind.orange_rate = (parseFloat(document.getElementById("cfg-wind-or").value) || 0) / 100;
+                
+                RULES_CONFIG.wind.yellow_mean = parseFloat(document.getElementById("cfg-wind-ym").value) || 0;
+                RULES_CONFIG.wind.yellow_gust = parseFloat(document.getElementById("cfg-wind-yg").value) || 0;
+                RULES_CONFIG.wind.yellow_rate = (parseFloat(document.getElementById("cfg-wind-yr").value) || 0) / 100;
             }
             evaluateWeatherTierAndColor();
         }
@@ -1137,6 +1159,7 @@
         let currentActiveTier = null; 
         let currentRate = 0;
 
+        // 🌟 [修改處] 更新為氣象署官方雙重指標判定邏輯
         function evaluateWeatherTierAndColor() {
             const rightColumn = document.getElementById("right-column");
             rightColumn.style.backgroundColor = "white"; 
@@ -1159,35 +1182,49 @@
                     rightColumn.style.backgroundColor = "var(--warning-yellow)";
                 }
             } else if (currentTab === 'rain') {
-                const r = activeWeatherData.rain;
-                if (r >= RULES_CONFIG.rain.purple_threshold) {
+                const r = activeWeatherData.rain; // 模擬毫米數
+                
+                // 🟣 超大豪雨：24h >= 500
+                if (r >= RULES_CONFIG.rain.purple_threshold_24h) {
                     currentActiveTier = 'purple';
                     currentRate = RULES_CONFIG.rain.purple_rate;
                     rightColumn.style.backgroundColor = "var(--warning-purple)";
-                } else if (r >= RULES_CONFIG.rain.red_threshold) {
+                } 
+                // 🔴 大豪雨：24h >= 350 或 3h >= 200
+                else if (r >= RULES_CONFIG.rain.red_threshold_24h || r >= RULES_CONFIG.rain.red_threshold_3h) {
                     currentActiveTier = 'red';
                     currentRate = RULES_CONFIG.rain.red_rate;
                     rightColumn.style.backgroundColor = "var(--warning-red)";
-                } else if (r >= RULES_CONFIG.rain.orange_threshold) {
+                } 
+                // 🟠 豪雨：24h >= 200 或 3h >= 100
+                else if (r >= RULES_CONFIG.rain.orange_threshold_24h || r >= RULES_CONFIG.rain.orange_threshold_3h) {
                     currentActiveTier = 'orange';
                     currentRate = RULES_CONFIG.rain.orange_rate;
                     rightColumn.style.backgroundColor = "var(--warning-orange)";
-                } else if (r >= RULES_CONFIG.rain.yellow_threshold) {
+                } 
+                // 🟡 大雨：24h >= 80 或 1h >= 40
+                else if (r >= RULES_CONFIG.rain.yellow_threshold_24h || r >= RULES_CONFIG.rain.yellow_threshold_1h) {
                     currentActiveTier = 'yellow';
                     currentRate = RULES_CONFIG.rain.yellow_rate;
                     rightColumn.style.backgroundColor = "var(--warning-yellow)";
                 }
             } else if (currentTab === 'wind') {
-                const w = activeWeatherData.wind;
-                if (w >= RULES_CONFIG.wind.red_wind) {
+                const w = activeWeatherData.wind; // 風級數
+                
+                // 🔴 紅色：平均風 >= 12 或 陣風 >= 14
+                if (w >= RULES_CONFIG.wind.red_mean || w >= RULES_CONFIG.wind.red_gust) {
                     currentActiveTier = 'red';
                     currentRate = RULES_CONFIG.wind.red_rate;
                     rightColumn.style.backgroundColor = "var(--warning-red)";
-                } else if (w >= RULES_CONFIG.wind.orange_wind) {
+                } 
+                // 🟠 橙色：平均風 >= 9 或 陣風 >= 11
+                else if (w >= RULES_CONFIG.wind.orange_mean || w >= RULES_CONFIG.wind.orange_gust) {
                     currentActiveTier = 'orange';
                     currentRate = RULES_CONFIG.wind.orange_rate;
                     rightColumn.style.backgroundColor = "var(--warning-orange)";
-                } else if (w >= RULES_CONFIG.wind.yellow_wind) {
+                } 
+                // 🟡 黃色：平均風 >= 6 或 陣風 >= 8
+                else if (w >= RULES_CONFIG.wind.yellow_mean || w >= RULES_CONFIG.wind.yellow_gust) {
                     currentActiveTier = 'yellow';
                     currentRate = RULES_CONFIG.wind.yellow_rate;
                     rightColumn.style.backgroundColor = "var(--warning-yellow)";
