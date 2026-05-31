@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClimateBeaver AI 平台</title>
     
-    <!-- 🌟 [修改處] 引入 Turnstile 自動刷新機制，徹底解決二次連線與恢復數據被擋的問題 -->
+    <!-- 🌟 [修改處] 修正 display:none 導致背景重設驗證碼卡死的問題，並加入 1.5 秒超時安全機制 -->
     <script>
         let turnstileToken = ""; // 全域儲存最新 Token
         let isTokenUsed = false; // 標記目前 Token 是否已被 Worker 使用過
@@ -16,18 +16,19 @@
             isTokenUsed = false; // 新 Token 產生，重設使用狀態
             console.log("✅ Turnstile 憑證取得成功:", token);
             
-            // 隱藏解鎖遮罩
+            // 🌟 隱藏解鎖遮罩 (改用 opacity 與 visibility，不使用 display: none)
             const overlay = document.getElementById("security-overlay");
             if (overlay) {
                 overlay.style.transition = "opacity 0.4s ease";
                 overlay.style.opacity = "0";
                 setTimeout(() => {
-                    overlay.style.display = "none";
+                    overlay.style.visibility = "hidden"; // 保持 DOM 活躍，確保背景 reset 順暢
+                    overlay.style.pointerEvents = "none"; // 允許滑鼠穿透點擊後方元素
                 }, 400);
             }
         }
 
-        // 🌟 自動刷新憑證 Promise：確保每次呼叫 API 時，拿到的都是未過期的全新 Token
+        // 自動刷新憑證 Promise (加入 1.5 秒超時跳過，確保台上簡報絕不卡死)
         function getFreshTurnstileToken() {
             return new Promise((resolve) => {
                 // 如果是第一次載入且已有 token，直接使用
@@ -39,10 +40,26 @@
 
                 console.log("[Turnstile] 正在為新請求自動刷新安全憑證...");
                 
-                // 覆寫回呼函式，讓它在取得新 Token 時自動 Resolve
+                // 🌟 設立 1.5 秒超時機制，防止在簡報現場因為網路慢或瀏覽器優化而卡在載入畫面
+                const timeoutId = setTimeout(() => {
+                    console.warn("[Turnstile] 刷新憑證超時，使用備用舊憑證直接載入，確保簡報順暢。");
+                    resolve(turnstileToken); // 逾時自動回傳舊的 Token，直接放行
+                }, 1500);
+
+                // 覆寫回呼函式
                 window.onTurnstileSuccess = function(token) {
+                    clearTimeout(timeoutId); // 成功取得，取消超時定時器
                     turnstileToken = token;
                     isTokenUsed = true;
+                    
+                    // 確保遮罩層為隱藏狀態
+                    const overlay = document.getElementById("security-overlay");
+                    if (overlay) {
+                        overlay.style.opacity = "0";
+                        overlay.style.visibility = "hidden";
+                        overlay.style.pointerEvents = "none";
+                    }
+                    
                     resolve(token);
                 };
 
@@ -50,6 +67,7 @@
                 if (typeof turnstile !== "undefined") {
                     turnstile.reset();
                 } else {
+                    clearTimeout(timeoutId);
                     console.warn("Turnstile 尚未載入完成");
                     resolve("");
                 }
@@ -91,7 +109,7 @@
             min-height: 100vh;
         }
 
-        /* 🌟 安全防護遮罩層 CSS */
+        /* 🌟 [修改處] 安全防護遮罩層 CSS，改用 visibility 控制顯示與隱藏 */
         #security-overlay {
             position: fixed;
             top: 0;
@@ -109,6 +127,11 @@
             text-align: center;
             padding: 20px;
             box-sizing: border-box;
+            
+            /* 🌟 使用 transition 來控制顯示/隱藏，不使用 display: none */
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            opacity: 1;
+            visibility: visible;
         }
 
         #security-overlay h2 {
