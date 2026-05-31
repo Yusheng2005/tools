@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InsurTech ESG 永續防災保險模擬平台</title>
+    <title>ClimateBeaver AI 平台</title>
+	<!-- 🌟 [加在這裡] 引入 Turnstile 腳本 -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- 引入 FontAwesome 圖標 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -481,10 +483,16 @@
     </style>
 </head>
 <body>
-
+<!-- 🌟 [加在這裡] 安全防護遮罩層 -->
+    <div id="security-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(27, 67, 50, 0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; gap: 20px; text-align: center; padding: 20px;">
+        <h2><i class="fa-solid fa-shield-halved"></i> ClimateBeaver AI 安全驗證</h2>
+        <p>為了防範機器人惡意攻擊並保障系統安全，請先完成驗證以解鎖平台：</p>
+        <!-- 請將下面的 data-sitekey 替換為您的 Site Key -->
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADbOo3LdsoUlarr0" data-callback="onTurnstileSuccess"></div>
+    </div>
     <!-- 導覽列 -->
     <header>
-        <h1><i class="fa-solid fa-shield-halved"></i> InsurTech ESG 永續防災模擬平台</h1>
+        <h1><i class="fa-solid fa-shield-halved"></i> ClimateBeaver AI 平台</h1>
         <div class="auth-container">
             <span id="user-status" style="font-size: 0.9rem;">訪客模式</span>
             <button class="btn-login" id="login-trigger-btn" onclick="toggleModal(true)">登入帳戶</button>
@@ -528,7 +536,7 @@
                     <button class="demo-btn" onclick="setDemoWeather('wind', 15)">模擬 15 級颶風</button>
                 </div>
                 <div style="text-align: center; margin-top: 10px;">
-                    <button class="demo-btn" onclick="resetToRealtime()" style="width: 100%;">恢復氣象署即時數據</button>
+                    <button class="demo-btn" onclick="resetToRealtime()" style="width: 100%;">恢復即時數據</button>
                 </div>
             </div>
         </div>
@@ -560,9 +568,9 @@
                 </div>
             </div>
 
-            <!-- 避險動作 Checkboxes (動態更換項目) -->
+            <!-- 避險動作 Checkboxes (動態更換項目，必須全部勾選) -->
             <div class="checkbox-group">
-                <h4 style="color: var(--medium-green);">請確認已執行的避險動作：</h4>
+                <h4 style="color: var(--medium-green);">請確認已「全數完成」以下避險動作：</h4>
                 <div id="checkboxes-container">
                     <!-- 由 JS 動態生成項目 -->
                 </div>
@@ -582,7 +590,7 @@
                     </div>
                 </div>
                 <div style="margin-top: 15px; font-size: 0.85rem; color: #64748b;" id="calculation-formula-desc">
-                    請輸入保費並勾選避險動作以進行精算。
+                    請輸入保費並完成全部避險動作以進行精算。
                 </div>
             </div>
 
@@ -607,7 +615,7 @@
         </div>
     </div>
 
-    <!-- Firebase 登入 Modal (無實際後端，留空給您之後串接) -->
+    <!-- Firebase 登入 Modal (無實際後端) -->
     <div class="modal" id="login-modal">
         <div class="modal-content">
             <span class="modal-close" onclick="toggleModal(false)">✕</span>
@@ -622,38 +630,125 @@
 
     <!-- JavaScript 邏輯控制 -->
     <script>
+// 🌟 [加在這裡] Token 變數與解鎖函式
+        let turnstileToken = ""; // 儲存驗證成功後的 Token
+
+        function onTurnstileSuccess(token) {
+            turnstileToken = token; // 將 Token 存起來
+            
+            // 移除模糊遮罩，解鎖主畫面
+            const overlay = document.getElementById("security-overlay");
+            overlay.style.transition = "opacity 0.5s ease";
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+                overlay.style.display = "none";
+            }, 500);
+        }
         // ==========================================
-        // 1. 本地氣象署與行政區數據結構 (預先建立主要縣市範本，可自行補齊)
+        // 1. 本地行政區數據結構 (與氣象署 API 代碼對照)
         // ==========================================
         const TW_DATA = {
-            "臺北市": {
-                apiCode: "F-D0047-061",
-                districts: ["中正區", "大安區", "信義區", "中山區", "松山區", "萬華區", "文山區", "士林區", "北投區", "內湖區", "南港區", "大同區"]
-            },
-            "新北市": {
-                apiCode: "F-D0047-069",
-                districts: ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區"]
-            },
-            "臺中市": {
-                apiCode: "F-D0047-073",
-                districts: ["西屯區", "北屯區", "南屯區", "中區", "東區", "南區", "西區", "北區", "豐原區", "大里區", "太平區"]
-            },
-            "高雄市": {
-                apiCode: "F-D0047-077",
-                districts: ["新興區", "前金區", "苓雅區", "鹽埕區", "鼓山區", "旗津區", "前鎮區", "三民區", "楠梓區", "小港區", "左營區"]
-            }
-        };
+    "基隆市": {
+        apiCode: "F-D0047-049",
+        districts: ["中正區", "七堵區", "暖暖區", "仁愛區", "中山區", "安樂區", "信義區"]
+    },
+    "臺北市": {
+        apiCode: "F-D0047-061",
+        districts: ["中正區", "大安區", "信義區", "中山區", "松山區", "萬華區", "文山區", "士林區", "北投區", "內湖區", "南港區", "大同區"]
+    },
+    "新北市": {
+        apiCode: "F-D0047-069",
+        districts: ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "鶯歌區", "三峽區", "瑞芳區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "萬里區", "烏來區"]
+    },
+    "桃園市": {
+        apiCode: "F-D0047-005",
+        districts: ["桃園區", "中壢區", "平鎮區", "八德區", "楊梅區", "蘆竹區", "大溪區", "龍潭區", "龜山區", "大園區", "觀音區", "新屋區", "復興區"]
+    },
+    "新竹市": {
+        apiCode: "F-D0047-053",
+        districts: ["東區", "北區", "香山區"]
+    },
+    "新竹縣": {
+        apiCode: "F-D0047-009",
+        districts: ["竹北市", "竹東鎮", "新埔鎮", "關西鎮", "湖口鄉", "新豐鄉", "芎林鄉", "橫山鄉", "北埔鄉", "寶山鄉", "峨眉鄉", "尖石鄉", "五峰鄉"]
+    },
+    "苗栗縣": {
+        apiCode: "F-D0047-013",
+        districts: ["苗栗市", "頭份市", "竹南鎮", "後龍鎮", "通霄鎮", "苑裡鎮", "卓蘭鎮", "造橋鄉", "西湖鄉", "頭屋鄉", "公館鄉", "銅鑼鄉", "三義鄉", "大湖鄉", "獅潭鄉", "三灣鄉", "南庄鄉", "泰安鄉"]
+    },
+    "臺中市": {
+        apiCode: "F-D0047-073",
+        districts: ["中區", "東區", "南區", "西區", "北區", "北屯區", "西屯區", "南屯區", "太平區", "大里區", "霧峰區", "烏日區", "豐原區", "後里區", "石岡區", "東勢區", "和平區", "新社區", "潭子區", "大雅區", "神岡區", "大肚區", "沙鹿區", "龍井區", "梧棲區", "清水區", "大甲區", "外埔區", "大安區"]
+    },
+    "彰化縣": {
+        apiCode: "F-D0047-017",
+        districts: ["彰化市", "員林市", "鹿港鎮", "和美鎮", "北斗鎮", "溪湖鎮", "田中鎮", "二林鎮", "線西鄉", "伸港鄉", "福興鄉", "秀水鄉", "花壇鄉", "芬園鄉", "大村鄉", "埔鹽鄉", "埔心鄉", "永靖鄉", "社頭鄉", "二水鄉", "田尾鄉", "埤頭鄉", "芳苑鄉", "大城鄉", "竹塘鄉", "溪州鄉"]
+    },
+    "南投縣": {
+        apiCode: "F-D0047-021",
+        districts: ["南投市", "埔里鎮", "草屯鎮", "竹山鎮", "集集鎮", "名間鄉", "鹿谷鄉", "中寮鄉", "魚池鄉", "國姓鄉", "水里鄉", "信義鄉", "仁愛鄉"]
+    },
+    "雲林縣": {
+        apiCode: "F-D0047-025",
+        districts: ["斗六市", "斗南鎮", "虎尾鎮", "西螺鎮", "土庫鎮", "北港鎮", "古坑鄉", "大埤鄉", "莿桐鄉", "林內鄉", "二崙鄉", "崙背鄉", "麥寮鄉", "東勢鄉", "褒忠鄉", "台西鄉", "元長鄉", "四湖鄉", "口湖鄉", "水林鄉"]
+    },
+    "嘉義市": {
+        apiCode: "F-D0047-057",
+        districts: ["東區", "西區"]
+    },
+    "嘉義縣": {
+        apiCode: "F-D0047-029",
+        districts: ["太保市", "朴子市", "布袋鎮", "大林鎮", "民雄鄉", "溪口鄉", "新港鄉", "六腳鄉", "東石鄉", "義竹鄉", "鹿草鄉", "水上鄉", "中埔鄉", "竹崎鄉", "梅山鄉", "番路鄉", "大埔鄉", "阿里山鄉"]
+    },
+    "臺南市": {
+        apiCode: "F-D0047-077",
+        districts: ["中西區", "東區", "南區", "北區", "安平區", "安南區", "永康區", "歸仁區", "新化區", "左鎮區", "玉井區", "楠西區", "南化區", "仁德區", "關廟區", "龍崎區", "官田區", "麻豆區", "佳里區", "西港區", "七股區", "將軍區", "學甲區", "北門區", "新營區", "後壁區", "白河區", "東山區", "六甲區", "下營區", "柳營區", "鹽水區", "善化區", "大內區", "山上區", "新市區", "安定區"]
+    },
+    "高雄市": {
+        apiCode: "F-D0047-065",
+        districts: ["鹽埕區", "鼓山區", "左營區", "楠梓區", "三民區", "新興區", "前金區", "苓雅區", "前鎮區", "旗津區", "小港區", "鳳山區", "林園區", "大寮區", "大樹區", "大社區", "仁武區", "鳥松區", "岡山區", "橋頭區", "燕巢區", "田寮區", "阿蓮區", "路竹區", "湖內區", "茄萣區", "永安區", "彌陀區", "梓官區", "旗山區", "美濃區", "六龜區", "甲仙區", "杉林區", "內門區", "茂林區", "桃源區", "那瑪夏區"]
+    },
+    "屏東縣": {
+        apiCode: "F-D0047-033",
+        districts: ["屏東市", "潮州鎮", "東港鎮", "恆春鎮", "萬丹鄉", "長治鄉", "麟洛鄉", "九如鄉", "里港鄉", "鹽埔鄉", "高樹鄉", "萬巒鄉", "內埔鄉", "竹田鄉", "新埤鄉", "枋寮鄉", "新園鄉", "崁頂鄉", "林邊鄉", "南州鄉", "佳冬鄉", "琉球鄉", "車城鄉", "滿州鄉", "枋山鄉", "三地門鄉", "霧臺鄉", "瑪家鄉", "泰武鄉", "來義鄉", "春日鄉", "獅子鄉", "牡丹鄉"]
+    },
+    "宜蘭縣": {
+        apiCode: "F-D0047-001",
+        districts: ["宜蘭市", "羅東鎮", "蘇澳鎮", "頭城鎮", "礁溪鄉", "壯圍鄉", "員山鄉", "冬山鄉", "五結鄉", "三星鄉", "大同鄉", "南澳鄉"]
+    },
+    "花蓮縣": {
+        apiCode: "F-D0047-041",
+        districts: ["花蓮市", "鳳林鎮", "玉里鎮", "新城鄉", "吉安鄉", "壽豐鄉", "光復鄉", "豐濱鄉", "瑞穗鄉", "富里鄉", "秀林鄉", "萬榮鄉", "卓溪鄉"]
+    },
+    "臺東縣": {
+        apiCode: "F-D0047-037",
+        districts: ["臺東市", "成功鎮", "關山鎮", "卑南鄉", "大武鄉", "太麻里鄉", "東河鄉", "長濱鄉", "鹿野鄉", "池上鄉", "綠島鄉", "延平鄉", "海端鄉", "達仁鄉", "金峰鄉", "蘭嶼鄉"]
+    },
+    "澎湖縣": {
+        apiCode: "F-D0047-045",
+        districts: ["馬公市", "湖西鄉", "白沙鄉", "西嶼鄉", "望安鄉", "七美鄉"]
+    },
+    "金門縣": {
+        apiCode: "F-D0047-085",
+        districts: ["金城鎮", "金湖鎮", "金沙鎮", "金寧鄉", "烈嶼鄉", "烏坵鄉"]
+    },
+    "連江縣": {
+        apiCode: "F-D0047-081",
+        districts: ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
+    }
+};
 
         // ==========================================
-        // 2. 初始化與 API 設定
+        // 2. 串接設定
         // ==========================================
-        // ⚠️ 請在此填入您的氣象署授權碼（Authorization碼）
-        const CWA_API_KEY = "YOUR_CWA_API_KEY_HERE"; 
+        // ⚠️ 請填入您部署好的 Cloudflare Worker URL (尾端不要加斜線)
+        // 例如: "https://cwa-proxy-worker.your-name.workers.dev"
+        const CLOUDFLARE_WORKER_URL = "esg-platform.y-ys-sl-l1226.workers.dev"; 
         
         let currentTab = 'temp'; 
         let activeWeatherData = {
             temp: 25,
-            rain: 10,  // 降雨機率或雨量
+            rain: 10,  
             wind: 3
         };
         let isDemoMode = false;
@@ -678,11 +773,12 @@
             }
         };
 
-        // 避險動作清單
+        // 避險動作清單 (全部為 3 項)
         const MITIGATION_ITEMS = {
             temp: [
                 { id: "t1", text: "已開啟廠區屋頂/外牆灑水降溫系統" },
-                { id: "t2", text: "已啟用節能通風空調系統並監測用電負載" }
+                { id: "t2", text: "已啟用節能通風空調系統並監測用電負載" },
+                { id: "t3", text: "已啟動備用儲冰/蓄冷系統以分散用電尖峰" }
             ],
             rain: [
                 { id: "r1", text: "一樓門市/倉庫已裝設防水閘門或堆疊防汛沙包" },
@@ -691,7 +787,8 @@
             ],
             wind: [
                 { id: "w1", text: "室外廣告招牌、帆布、排風管已完成補強或收合" },
-                { id: "w2", text: "玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門" }
+                { id: "w2", text: "玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門" },
+                { id: "w3", text: "已暫停高空與戶外危險作業，人員全數撤回安全室內" }
             ]
         };
 
@@ -727,10 +824,11 @@
         }
 
         // ==========================================
-        // 3. 氣象數據處理邏輯 (API 與 Demo 雙軌)
+        // 3. 氣象數據處理邏輯 (透過 Cloudflare Worker 代理)
         // ==========================================
+        // 🌟 [在原本 fetchWeather 處，整段替換成以下新代碼]
         async function fetchWeather() {
-            if (isDemoMode) return; // 模擬模式下不讀取真實氣候
+            if (isDemoMode) return; 
 
             const county = document.getElementById("county-select").value;
             const district = document.getElementById("district-select").value;
@@ -740,15 +838,54 @@
             document.getElementById("location-display").innerText = `${county} ${district}`;
             document.getElementById("weather-desc").innerText = "資料載入中...";
 
-            // 防呆 fallback 機制：若無填寫 API key 則自動啟動預設安全模擬
-            if (CWA_API_KEY === "YOUR_CWA_API_KEY_HERE" || CWA_API_KEY === "") {
-                console.warn("未偵測到有效的中央氣象署 API Key，已為您自動啟用模擬即時天氣。");
+            if (CLOUDFLARE_WORKER_URL === "您的_CLOUDFLARE_WORKER_URL" || CLOUDFLARE_WORKER_URL === "") {
+                console.warn("未偵測到 Cloudflare Worker 網址，為您啟用前端備用天氣模擬。");
                 simulateFallbackWeather(county, district);
                 return;
             }
 
             const apiCode = TW_DATA[county].apiCode;
-            const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${apiCode}?Authorization=${CWA_API_KEY}&locationName=${encodeURIComponent(district)}&elementName=T,PoP12h,WD`;
+            
+            // 在 API 請求中多帶入一個 &token 參數
+            const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}&token=${turnstileToken}`;
+
+            try {
+                const response = await fetch(url);
+                
+                if (response.status === 403) {
+                    const errData = await response.json();
+                    alert(errData.error);
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (data.success === "true") {
+                    const elements = data.records.locations[0].location[0].weatherElement;
+                    const tempVal = parseFloat(elements.find(el => el.elementName === "T").time[0].elementValue[0].value);
+                    const popVal = parseFloat(elements.find(el => el.elementName === "PoP12h").time[0].elementValue[0].value || 0);
+                    const windDesc = elements.find(el => el.elementName === "WD").time[0].elementValue[0].value || "0";
+                    const windVal = parseFloat(windDesc.replace(/[^0-9.]/g, '')) || 3; 
+
+                    activeWeatherData = { temp: tempVal, rain: popVal, wind: windVal };
+                    
+                    updateWeatherUI(tempVal, popVal, windVal, "透過 Cloudflare 安全串接");
+                    evaluateWeatherTierAndColor();
+                } else {
+                    throw new Error("無法解析氣象數據");
+                }
+            } catch (err) {
+                console.error("Cloudflare Worker 連線失敗，啟動備用模擬機制：", err);
+                simulateFallbackWeather(county, district);
+            }
+        }
+
+        function simulateFallbackWeather(county, district) {
+            const mockTemp = (24 + Math.random() * 8).toFixed(1);
+
+            const apiCode = TW_DATA[county].apiCode;
+            // 前端不含有任何授權金鑰，安全性大幅提升
+            const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}`;
 
             try {
                 const response = await fetch(url);
@@ -767,27 +904,25 @@
 
                     activeWeatherData = { temp: tempVal, rain: popVal, wind: windVal };
                     
-                    updateWeatherUI(tempVal, popVal, windVal, "來自氣象署即時預報");
+                    updateWeatherUI(tempVal, popVal, windVal, "透過 Cloudflare 安全串接");
                     evaluateWeatherTierAndColor();
                 } else {
-                    throw new Error("API 回傳異常");
+                    throw new Error("Cloudflare 代理獲取資料異常");
                 }
             } catch (err) {
-                console.error("API 連線失敗，啟動備用模擬機制：", err);
+                console.error("Cloudflare Worker 連線失敗，啟動備用模擬機制：", err);
                 simulateFallbackWeather(county, district);
             }
         }
 
-        // 氣象署 API Fallback 機制 (讓簡報不破功)
         function simulateFallbackWeather(county, district) {
-            // 提供合理的隨機天氣數據
             const mockTemp = (24 + Math.random() * 8).toFixed(1);
             const mockPop = Math.floor(Math.random() * 100);
             const mockWind = (1 + Math.random() * 5).toFixed(1);
 
             activeWeatherData = { temp: parseFloat(mockTemp), rain: mockPop, wind: parseFloat(mockWind) };
             
-            updateWeatherUI(mockTemp, mockPop, mockWind, "即時模擬數據 (請確認API金鑰)");
+            updateWeatherUI(mockTemp, mockPop, mockWind, "離線模擬天氣 (請填寫 Cloudflare Worker 網址)");
             evaluateWeatherTierAndColor();
         }
 
@@ -805,17 +940,17 @@
             isDemoMode = true;
             document.querySelectorAll(".demo-btn").forEach(btn => btn.classList.remove("active"));
             
-            // 標示目前正在模擬的天氣按鈕
-            event.target.classList.add("active");
+            if (event) {
+                event.target.classList.add("active");
+            }
 
             if (type === 'temp') activeWeatherData.temp = value;
-            if (type === 'rain') activeWeatherData.rain = value; // 暴雨毫米
+            if (type === 'rain') activeWeatherData.rain = value; 
             if (type === 'wind') activeWeatherData.wind = value;
 
             document.getElementById("location-display").innerText = "⚠️ 測試控制模式中";
             updateWeatherUI(activeWeatherData.temp, activeWeatherData.rain, activeWeatherData.wind, "手動覆寫模擬數據");
             
-            // 同步切換右側相對應的 Tab
             switchTab(type);
             evaluateWeatherTierAndColor();
         }
@@ -832,7 +967,7 @@
         }
 
         // ==========================================
-        // 5. 右側保險精算與動態顏色演算
+        // 5. 右側保險精算與動態顏色與 3 勾選強限制邏輯
         // ==========================================
         function switchTab(tabName) {
             currentTab = tabName;
@@ -844,21 +979,20 @@
             evaluateWeatherTierAndColor();
         }
 
-        // 動態生成可編輯規則
         function renderRules() {
             const ruleDiv = document.getElementById("rule-content");
             if (currentTab === 'temp') {
                 ruleDiv.innerHTML = `
-                    <h4><i class="fa-solid fa-temperature-high"></i> 溫度判定與防災折扣規則：</h4>
+                    <h4><i class="fa-solid fa-temperature-high"></i> 溫度判定與折扣規則 (可直接修改)：</h4>
                     <ul>
-                        <li>🔴 紅色：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-rr" value="${RULES_CONFIG.temp.red_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
-                        <li>🟠 橘色：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-or" value="${RULES_CONFIG.temp.orange_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
-                        <li>🟡 黃色：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-yr" value="${RULES_CONFIG.temp.yellow_rate * 100}" class="rule-input" oninput="updateConfig('temp')">% 或等值點數</li>
+                        <li>🔴 紅色：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-rr" value="${RULES_CONFIG.temp.red_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟠 橘色：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-or" value="${RULES_CONFIG.temp.orange_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟡 黃色：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-temp-yr" value="${RULES_CONFIG.temp.yellow_rate * 100}" class="rule-input" oninput="updateConfig('temp')">%</li>
                     </ul>
                 `;
             } else if (currentTab === 'rain') {
                 ruleDiv.innerHTML = `
-                    <h4><i class="fa-solid fa-cloud-showers-heavy"></i> 累積雨量與防災折扣規則：</h4>
+                    <h4><i class="fa-solid fa-cloud-showers-heavy"></i> 累積雨量與折扣規則 (可直接修改)：</h4>
                     <ul>
                         <li>🟣 紫色 (超大豪雨)：雨量達 <input type="number" id="cfg-rain-p" value="${RULES_CONFIG.rain.purple_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-pr" value="${RULES_CONFIG.rain.purple_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
                         <li>🔴 紅色 (大豪雨)：雨量達 <input type="number" id="cfg-rain-r" value="${RULES_CONFIG.rain.red_threshold}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 下次保費折抵 <input type="number" step="0.01" id="cfg-rain-rr" value="${RULES_CONFIG.rain.red_rate * 100}" class="rule-input" oninput="updateConfig('rain')">%</li>
@@ -868,17 +1002,16 @@
                 `;
             } else if (currentTab === 'wind') {
                 ruleDiv.innerHTML = `
-                    <h4><i class="fa-solid fa-wind"></i> 風速判定與防災折扣規則：</h4>
+                    <h4><i class="fa-solid fa-wind"></i> 風速判定與折扣規則 (可直接修改)：</h4>
                     <ul>
-                        <li>🔴 紅色 (12級風)：平均風速 <input type="number" id="cfg-wind-rw" value="${RULES_CONFIG.wind.red_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${RULES_CONFIG.wind.red_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
-                        <li>🟠 橘色 (9級風)：平均風速 <input type="number" id="cfg-wind-ow" value="${RULES_CONFIG.wind.orange_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${RULES_CONFIG.wind.orange_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
-                        <li>🟡 黃色 (6級風)：平均風速 <input type="number" id="cfg-wind-yw" value="${RULES_CONFIG.wind.yellow_wind}" class="rule-input" oninput="updateConfig('wind')">級 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${RULES_CONFIG.wind.yellow_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🔴 紅色：風速達 <input type="number" id="cfg-wind-rw" value="${RULES_CONFIG.wind.red_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${RULES_CONFIG.wind.red_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟠 橘色：風速達 <input type="number" id="cfg-wind-ow" value="${RULES_CONFIG.wind.orange_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${RULES_CONFIG.wind.orange_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟡 黃色：風速達 <input type="number" id="cfg-wind-yw" value="${RULES_CONFIG.wind.yellow_wind}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${RULES_CONFIG.wind.yellow_rate * 100}" class="rule-input" oninput="updateConfig('wind')">%</li>
                     </ul>
                 `;
             }
         }
 
-        // 更新使用者當前修改的規則參數
         function updateConfig(type) {
             if (type === 'temp') {
                 RULES_CONFIG.temp.red_threshold = parseFloat(document.getElementById("cfg-temp-r").value);
@@ -907,7 +1040,6 @@
             evaluateWeatherTierAndColor();
         }
 
-        // 動態生成避險 checkboxes
         function renderCheckboxes() {
             const container = document.getElementById("checkboxes-container");
             container.innerHTML = "";
@@ -922,13 +1054,12 @@
             });
         }
 
-        // 核心邏輯：判斷目前天氣落在哪個燈號，並更新右側底色
-        let currentActiveTier = null; // 'yellow', 'orange', 'red', 'purple', null
+        let currentActiveTier = null; 
         let currentRate = 0;
 
         function evaluateWeatherTierAndColor() {
             const rightColumn = document.getElementById("right-column");
-            rightColumn.style.backgroundColor = "white"; // 預設白
+            rightColumn.style.backgroundColor = "white"; 
             currentActiveTier = null;
             currentRate = 0;
 
@@ -986,16 +1117,23 @@
             calculateIncentive();
         }
 
-        // 精算保費折抵與防災點數
+        // 🌟 修改處：三個都必須勾選才會有減免效果
         function calculateIncentive() {
             const premium = parseFloat(document.getElementById("premium-amount").value) || 0;
             
-            // 檢查避險動作是否至少勾選一項 (可視需求調整為必須全勾)
+            // 檢查避險動作是否「全數」勾選
             const checkboxes = document.querySelectorAll("#checkboxes-container input[type='checkbox']");
-            let isMitigated = false;
-            checkboxes.forEach(cb => {
-                if (cb.checked) isMitigated = true;
-            });
+            let allMitigated = true;
+            
+            if (checkboxes.length === 0) {
+                allMitigated = false;
+            } else {
+                checkboxes.forEach(cb => {
+                    if (!cb.checked) {
+                        allMitigated = false; // 只要有一個沒勾，就不算通過
+                    }
+                });
+            }
 
             const discountEl = document.getElementById("discount-val");
             const pointsEl = document.getElementById("points-val");
@@ -1008,24 +1146,24 @@
                 return;
             }
 
-            if (!isMitigated) {
+            if (!allMitigated) {
                 discountEl.innerText = "$0";
                 pointsEl.innerText = "0 點";
-                formulaDesc.innerText = `🚨 偵測到當前氣候已達 [${currentActiveTier.toUpperCase()}] 等級警報！請勾選下方避險完成動作，即可獲取 ${(currentRate * 100).toFixed(2)}% 折抵。`;
+                formulaDesc.innerHTML = `🚨 偵測到當前氣候已達 [${currentActiveTier.toUpperCase()}] 等級警報！<br><strong>必須完成並勾選上方全部 3 項避險動作</strong>，才能啟用 ${(currentRate * 100).toFixed(2)}% 保費折抵。`;
                 return;
             }
 
-            // 雙條件符合：計算折抵
+            // 三個皆勾選，開始動態計算
             const discountAmount = Math.round(premium * currentRate);
-            const pointsAwarded = Math.round(premium * currentRate); // 1元等值1點
+            const pointsAwarded = Math.round(premium * currentRate); 
 
             discountEl.innerText = `$${discountAmount}`;
             pointsEl.innerText = `${pointsAwarded} 點`;
-            formulaDesc.innerHTML = `✅ <strong>防災條件成立：</strong> 警戒燈號達 [${currentActiveTier.toUpperCase()}]，且保戶已採取主動避險。計算公式：$${premium} × ${(currentRate * 100).toFixed(2)}% = <strong>$${discountAmount}</strong> 元。`;
+            formulaDesc.innerHTML = `✅ <strong>防災條件成立：</strong> 警戒燈號達 [${currentActiveTier.toUpperCase()}]，且已落實全部 3 項避險動作。計算公式：$${premium} × ${(currentRate * 100).toFixed(2)}% = <strong>$${discountAmount}</strong> 元。`;
         }
 
         // ==========================================
-        // 6. 本地 OLLAMA QWEN 2.5 AI 客服邏輯
+        // 6. 本地 OLLAMA QWEN 2.5 AI 客服
         // ==========================================
         function toggleChat() {
             const chatWin = document.getElementById("chat-window");
@@ -1044,11 +1182,9 @@
             appendMessage("msg-user", query);
             input.value = "";
 
-            // 顯示正在輸入
             const loadingId = appendMessage("msg-bot", "系統分析中...");
 
             try {
-                // 串接本地端 Ollama API
                 const response = await fetch("http://localhost:11434/api/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1068,8 +1204,8 @@
                 const data = await response.json();
                 document.getElementById(loadingId).innerText = data.message.content;
             } catch (err) {
-                console.error("無法連線至本地 Ollama，請確認是否執行 `ollama run qwen2.5:7b` 並開啟 CORS 權限限制。", err);
-                document.getElementById(loadingId).innerText = "【Demo 備用回覆】當前 AI 未偵測到本機 Ollama (qwen2.5:7b) 運作，請確保您在電腦命令列已啟動服務並設置 OLLAMA_ORIGINS=\"*\"。此功能在實機部署時，保戶可諮詢智慧減損建議。";
+                console.error("無法連線至本地 Ollama", err);
+                document.getElementById(loadingId).innerText = "【Demo 備用回覆】本機未偵測到 Ollama 運作。請確保已執行 `ollama run qwen2.5:7b` 並開啟 OLLAMA_ORIGINS=\"*\" 的 CORS 存取設定。";
             }
         }
 
@@ -1086,7 +1222,7 @@
         }
 
         // ==========================================
-        // 7. FIREBASE 登入模擬
+        // 7. FIREBASE 登入模擬 (前台顯示為主)
         // ==========================================
         function toggleModal(show) {
             document.getElementById("login-modal").style.display = show ? "flex" : "none";
