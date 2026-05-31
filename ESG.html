@@ -900,11 +900,37 @@
                 const data = await response.json();
                 
                 if (data.success === "true") {
-                    const elements = data.records.locations[0].location[0].weatherElement;
-                    const tempVal = parseFloat(elements.find(el => el.elementName === "T").time[0].elementValue[0].value);
-                    const popVal = parseFloat(elements.find(el => el.elementName === "PoP12h").time[0].elementValue[0].value || 0);
-                    const windDesc = elements.find(el => el.elementName === "WD").time[0].elementValue[0].value || "0";
-                    const windVal = parseFloat(windDesc.replace(/[^0-9.]/g, '')) || 3; 
+                    const locations = data.records.locations;
+                    if (!locations || locations.length === 0 || !locations[0].location || locations[0].location.length === 0) {
+                        throw new Error("找不到該行政區的氣象資料");
+                    }
+                    
+                    const elements = locations[0].location[0].weatherElement;
+                    if (!elements) {
+                        throw new Error("無法取得天氣要素");
+                    }
+
+                    // 🌟 安全尋找數值的輔助函式 (相容3天與7天預報的欄位名)
+                    const findValue = (possibleNames) => {
+                        const found = elements.find(el => possibleNames.includes(el.elementName));
+                        if (found && found.time && found.time[0] && found.time[0].elementValue && found.time[0].elementValue[0]) {
+                            return found.time[0].elementValue[0].value;
+                        }
+                        return null;
+                    };
+
+                    // 1. 溫度：優先找 T，再找 Temperature (預設值 25)
+                    const tempValStr = findValue(["T", "Temperature"]) || "25";
+                    const tempVal = parseFloat(tempValStr);
+
+                    // 2. 降雨：3天預報為 PoP6h，7天預報為 PoP12h，有些為 PoP (預設值 0)
+                    const popValStr = findValue(["PoP6h", "PoP12h", "PoP"]) || "0";
+                    const popVal = parseFloat(popValStr);
+
+                    // 3. 風速：3天預報為 Wind，有些為 WindSpeed 或 WD (預設值 3)
+                    const windValStr = findValue(["Wind", "WindSpeed", "WD"]) || "3";
+                    // 移除非數字字元後轉為浮點數
+                    const windVal = parseFloat(String(windValStr).replace(/[^0-9.]/g, '')) || 3; 
 
                     activeWeatherData = { temp: tempVal, rain: popVal, wind: windVal };
                     
