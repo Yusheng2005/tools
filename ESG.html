@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClimateBeaver AI 平台</title>
+	<!-- 🌟 [修改這裡] 將 Token 變數與解鎖函式移到最上方定義 -->
+    <script>
+        let turnstileToken = ""; // 全域儲存驗證成功後的 Token
+
+        function onTurnstileSuccess(token) {
+            turnstileToken = token; // 將 Token 存起來
+            
+            // 立即隱藏遮罩層，確保絕對不會卡住
+            const overlay = document.getElementById("security-overlay");
+            if (overlay) {
+                overlay.style.transition = "opacity 0.4s ease";
+                overlay.style.opacity = "0";
+                setTimeout(() => {
+                    overlay.style.display = "none";
+                }, 400);
+            }
+        }
+    </script>
 	<!-- 🌟 [加在這裡] 引入 Turnstile 腳本 -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- 引入 FontAwesome 圖標 -->
@@ -630,20 +648,6 @@
 
     <!-- JavaScript 邏輯控制 -->
     <script>
-// 🌟 [加在這裡] Token 變數與解鎖函式
-        let turnstileToken = ""; // 儲存驗證成功後的 Token
-
-        function onTurnstileSuccess(token) {
-            turnstileToken = token; // 將 Token 存起來
-            
-            // 移除模糊遮罩，解鎖主畫面
-            const overlay = document.getElementById("security-overlay");
-            overlay.style.transition = "opacity 0.5s ease";
-            overlay.style.opacity = "0";
-            setTimeout(() => {
-                overlay.style.display = "none";
-            }, 500);
-        }
         // ==========================================
         // 1. 本地行政區數據結構 (與氣象署 API 代碼對照)
         // ==========================================
