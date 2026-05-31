@@ -878,15 +878,16 @@
             document.getElementById("weather-desc").innerText = "資料載入中...";
 
             if (CLOUDFLARE_WORKER_URL === "您的_CLOUDFLARE_WORKER_URL" || CLOUDFLARE_WORKER_URL === "") {
-                console.warn("未偵測到 Cloudflare Worker 網址，為您啟用前端備用天氣模擬。");
+                console.warn("[前端] 未偵測到 Cloudflare Worker 網址，為您啟用前端備用天氣模擬。");
                 simulateFallbackWeather(county, district);
                 return;
             }
 
             const apiCode = TW_DATA[county].apiCode;
-            
-            // 在 API 請求中帶入 Token
             const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}&token=${turnstileToken}`;
+
+            // 🔍 除錯紀錄 1：前端呼叫 Worker 的實際網址
+            console.log("%c[前端除錯] 1. 正在呼叫的 Cloudflare Worker 網址:", "color: #1b4332; font-weight: bold;", url);
 
             try {
                 const response = await fetch(url);
@@ -899,31 +900,51 @@
 
                 const data = await response.json();
                 
-                if (data.success === "true") {
+                // 🔍 除錯紀錄 2：氣象署回傳的原始 JSON 資料
+                console.log("%c[前端除錯] 2. 氣象署回傳的原始 JSON 結構:", "color: #2d6a4f;", data);
+
+                if (data.success === "true" || data.success === true) {
                     const records = data.records || data.Records;
                     if (!records) {
                         throw new Error("氣象回傳資料中找不到 records 欄位");
                     }
 
-                    // 1. 取得 Locations 陣列 (相容新版大寫 Locations 與舊版小寫 locations)
+                    // 解析 Locations (相容大小寫)
                     const locations = records.Locations || records.locations;
                     if (!locations || locations.length === 0) {
-                        throw new Error("找不到該縣市的預報資料");
+                        throw new Error("找不到該縣市的預報資料 (Locations 陣列為空)");
                     }
                     
-                    // 2. 取得 Location 陣列 (相容新版大寫 Location 與舊版小寫 location)
+                    // 解析 Location (相容大小寫)
                     const locationList = locations[0].Location || locations[0].location;
                     if (!locationList || locationList.length === 0) {
-                        throw new Error("找不到該行政區的預報資料");
+                        throw new Error("找不到該行政區的預報資料 (Location 陣列為空)");
                     }
 
-                    // 3. 取得 WeatherElement 陣列 (相容大小寫)
-                    const elements = locationList[0].WeatherElement || locationList[0].weatherElement;
+                    // 🔍 除錯紀錄 3：列出所有可用的行政區名稱列表
+                    const availableDistricts = locationList.map(loc => loc.LocationName || loc.locationName);
+                    console.log("%c[前端除錯] 3. CWA 回傳中所有可用的行政區名稱列表:", "color: #52b788;", availableDistricts);
+
+                    // 🌟 進行行政區雙向包含模糊匹配 (例如 "東區" 與 "嘉義市東區" 能互相匹配)
+                    const matchedLocation = locationList.find(loc => {
+                        const name = loc.LocationName || loc.locationName;
+                        if (!name) return false;
+                        return name === district || name.includes(district) || district.includes(name);
+                    });
+
+                    if (!matchedLocation) {
+                        throw new Error(`找不到與 "${district}" 匹配的行政區資料。`);
+                    }
+
+                    // 🔍 除錯紀錄 4：最終匹配到的行政區
+                    console.log("%c[前端除錯] 4. 最終成功匹配到的行政區資料塊:", "color: #0077b6; font-weight: bold;", matchedLocation);
+
+                    const elements = matchedLocation.WeatherElement || matchedLocation.weatherElement;
                     if (!elements) {
-                        throw new Error("無法取得天氣要素列表");
+                        throw new Error("無法取得該行政區的天氣要素列表");
                     }
 
-                    // 🌟 核心：新舊版中英文雙向相容尋找器
+                    // 🌟 新/舊、中/英文要素與數值鍵相容解析器
                     const safeFindValue = (elementNames, valueKeys) => {
                         const element = elements.find(el => {
                             const name = el.ElementName || el.elementName;
@@ -937,7 +958,6 @@
                         const valList = timeList[0].ElementValue || timeList[0].elementValue;
                         if (!valList || valList.length === 0) return null;
 
-                        // 核對新版的各要素專用鍵值 (如 Temperature, WindSpeed 等) 或舊版的 value
                         for (const key of valueKeys) {
                             if (valList[0][key] !== undefined && valList[0][key] !== null) {
                                 return valList[0][key];
@@ -946,27 +966,30 @@
                         return null;
                     };
 
-                    // 1. 溫度：相容新版 [溫度, 平均溫度] 欄位 [Temperature] / 舊版 [T, Temperature] 欄位 [value]
+                    // 1. 溫度解析 (新版為中文 "溫度" + "Temperature" 欄位；舊版為 "T" + "value" 欄位)
                     const tempValStr = safeFindValue(["溫度", "平均溫度", "T", "Temperature"], ["Temperature", "value"]) || "25";
                     const tempVal = parseFloat(tempValStr);
 
-                    // 2. 降雨：相容新版 [3小時降雨機率, 12小時降雨機率] 欄位 [ProbabilityOfPrecipitation] / 舊版 [PoP6h, PoP12h, PoP] 欄位 [value]
+                    // 2. 降雨機率解析 (新版為 "3小時降雨機率" + "ProbabilityOfPrecipitation"；舊版為 "PoP6h" + "value")
                     const popValStr = safeFindValue(["3小時降雨機率", "12小時降雨機率", "PoP6h", "PoP12h", "PoP"], ["ProbabilityOfPrecipitation", "value"]) || "0";
                     const popVal = parseFloat(popValStr);
 
-                    // 3. 風速：相容新版 [風速] 欄位 [WindSpeed] / 舊版 [Wind, WindSpeed, WD] 欄位 [value]
+                    // 3. 風速解析 (新版為 "風速" + "WindSpeed"；舊版為 "Wind" + "value")
                     const windValStr = safeFindValue(["風速", "Wind", "WindSpeed", "WD"], ["WindSpeed", "value"]) || "3";
                     const windVal = parseFloat(String(windValStr).replace(/[^0-9.]/g, '')) || 3; 
+
+                    // 🔍 除錯紀錄 5：最終精算後的氣象要素數值
+                    console.log("%c[前端除錯] 5. 解析出的環境數值 - 溫度:", "color: #ffb703; font-weight: bold;", tempVal, "降雨:", popVal, "風速:", windVal);
 
                     activeWeatherData = { temp: tempVal, rain: popVal, wind: windVal };
                     
                     updateWeatherUI(tempVal, popVal, windVal, "透過 Cloudflare 安全串接");
                     evaluateWeatherTierAndColor();
                 } else {
-                    throw new Error("無法解析氣象數據");
+                    throw new Error("無法解析氣象數據 (success 欄位不為 true)");
                 }
             } catch (err) {
-                console.error("Cloudflare Worker 連線失敗，啟動備用模擬機制：", err);
+                console.error("%c[前端除錯] 🚨 氣象資料獲取失敗，啟動備用模擬機制：", "color: red; font-weight: bold;", err);
                 simulateFallbackWeather(county, district);
             }
         }
