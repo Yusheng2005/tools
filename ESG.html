@@ -767,7 +767,7 @@
             },
             "新北市": {
                 apiCode: "F-D0047-069",
-                districts: ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "鶯歌區", "三峽區", "瑞芳區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "萬里區", "烏來區"]
+                districts: ["板橋區", "三重區", "受和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "鶯歌區", "三峽區", "瑞芳區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "万里區", "烏來區"]
             },
             "桃園市": {
                 apiCode: "F-D0047-005",
@@ -831,7 +831,7 @@
             },
             "臺東縣": {
                 apiCode: "F-D0047-037",
-                districts: ["臺東市", "成功鎮", "關山鎮", "卑南鄉", "大武鄉", "太麻里鄉", "東河鄉", "長濱鄉", "鹿野鄉", "池上鄉", "綠島鄉", "延平鄉", "海端鄉", "達仁鄉", "金峰鄉", "蘭嶼鄉"]
+                districts: ["臺東市", "成功鎮", "關山鎮", "卑南鄉", "大武鄉", "太麻里鄉", "東河鄉", "長濱鄉", "長濱鄉", "鹿野鄉", "池上鄉", "綠島鄉", "延平鄉", "海端鄉", "達仁鄉", "金峰鄉", "蘭嶼鄉"]
             },
             "澎湖縣": {
                 apiCode: "F-D0047-045",
@@ -850,43 +850,30 @@
         // ==========================================
         // 2. 串接設定
         // ==========================================
-        // 🌟 [修正處] 補上完整的 https:// 前綴
         const CLOUDFLARE_WORKER_URL = "https://esg-platform.y-ys-sl-l1226.workers.dev"; 
         
         let currentTab = 'temp';
-// 🌟 [步驟 3 新增在這裡] 
-        let demoActive = { temp: false, rain: false, wind: false }; 
-        let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; 
-        let checkedStates = {
-            t1: false, t2: false, t3: false,
-            r1: false, r2: false, r3: false,
-            w1: false, w2: false, w3: false
-        };
 
-        let activeWeatherData = {
-            temp: 25,
-            rain: 10,  
-            wind: 3
-        };
-// ==========================================
-        // 🌟 [新增變數] 用於追蹤 Demo 開關狀態、實時數據暫存，與所有 Checkbox 的勾選記憶
-        // ==========================================
-                
-        let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; // 暫存真實氣象資料
+        // 🌟 [整理處] 追蹤開關狀態、實時數據暫存，與所有 Checkbox 的勾選記憶 (全部只保留唯一的這一次宣告！)
+        let demoActive = { temp: false, rain: false, wind: false }; 
+        
+        let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; 
         
         let checkedStates = {
             t1: false, t2: false, t3: false,
             r1: false, r2: false, r3: false,
             w1: false, w2: false, w3: false
-        }; // 記憶 9 個避險 checkbox 狀態，解決切換 Tab 就被清除的問題 
+        };
+
         let activeWeatherData = {
             temp: 25,
             rain: 10,  
             wind: 3
         };
+
         let isDemoMode = false;
 
-        // 🌟 [修改處] 修正預設折抵比例 (0.1%、0.05%、0.01% 等) 
+        // 🌟 修正預設折抵比例 (0.1%、0.05%、0.01% 等) 
         // 並且為雨量與風速導入「雙重閥值」規則配置
         const RULES_CONFIG = {
             temp: {
@@ -983,7 +970,7 @@
             const apiCode = TW_DATA[county].apiCode;
             
             try {
-                // 🌟 [關鍵修正] 在發送 fetch 請求前，呼叫 getFreshTurnstileToken() 自動在背景刷新 Token
+                // 在發送 fetch 請求前，呼叫 getFreshTurnstileToken() 自動在背景刷新 Token
                 const activeToken = await getFreshTurnstileToken();
                 const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}&token=${activeToken}`;
 
@@ -1040,7 +1027,7 @@
                     const windValStr = safeFindValue(["風速", "Wind", "WindSpeed", "WD"], ["WindSpeed", "value"]) || "3";
                     const windMs = parseFloat(String(windValStr).replace(/[^0-9.]/g, '')) || 3; 
 
-                    // 🌟 [步驟 8 修改在這裡] 換算衍生氣象數據
+                    // 換算衍生氣象數據
                     const rainMm = parseFloat((popVal * 0.4).toFixed(1));
                     const windScale = convertMsToBeaufort(windMs);
 
@@ -1053,7 +1040,7 @@
                         wind: windScale
                     };
 
-                    // 🌟 呼叫合併整合器 (替代原有的 activeWeatherData 賦值及 UI 更新)
+                    // 呼叫合併整合器
                     updateActiveWeatherData();
 
                 } else {
@@ -1065,7 +1052,7 @@
             }
         }
 
-        // 🌟 [修改處] 調整離線模擬，使其與新 UI 參數一致
+        // 調整離線模擬，使其與新 UI 參數一致
         function simulateFallbackWeather(county, district) {
             const mockTemp = parseFloat((24 + Math.random() * 8).toFixed(1));
             const mockPop = Math.floor(Math.random() * 100);
@@ -1075,7 +1062,7 @@
             const rainMm = parseFloat((mockPop * 0.4).toFixed(1));
             const windScale = convertMsToBeaufort(mockWindMs);
 
-            activeWeatherData = { 
+            realtimeWeatherData = { 
                 temp: mockTemp, 
                 rain: rainMm, 
                 wind: windScale,
@@ -1083,11 +1070,10 @@
                 wind_speed: mockWindMs
             };
             
-            updateWeatherUI(mockTemp, mockPop, mockWindMs, "離線模擬天氣", rainMm, windScale);
-            evaluateWeatherTierAndColor();
+            updateActiveWeatherData();
         }
 
-	// 🌟 [就加在這裡！] 標準蒲福風級 (Beaufort Scale) 換算器
+        // 標準蒲福風級 (Beaufort Scale) 換算器
         function convertMsToBeaufort(ms) {
             if (ms < 0.3) return 0;
             if (ms <= 1.5) return 1;
@@ -1109,7 +1095,7 @@
             return 17;
         }
 
-        // 🌟 [修改處] 擴充 UI 看板更新欄位
+        // 擴充 UI 看板更新欄位
         function updateWeatherUI(temp, rainPop, windMs, sourceTag, rainMm, windScale) {
             document.getElementById("temp-display").innerText = `${temp}°C`;
             document.getElementById("pop-display").innerText = `${rainPop}%`;
@@ -1122,7 +1108,7 @@
         // ==========================================
         // 4. DEMO 現場手動模擬功能
         // ==========================================
-        // 1. 🌟 [新增] 開關切換控制：點擊按鈕恆亮，再點一次熄滅恢復
+        // 1. 開關切換控制：點擊按鈕恆亮，再點一次熄滅恢復
         function toggleDemoWeather(type, value) {
             demoActive[type] = !demoActive[type]; // 切換開關狀態
             
@@ -1136,7 +1122,7 @@
             updateActiveWeatherData();
         }
 
-        // 2. 🌟 [新增] 合併實時氣象與模擬覆寫的整合器
+        // 2. 合併實時氣象與模擬覆寫的整合器
         function updateActiveWeatherData() {
             // 先載入實時氣象作為基準
             activeWeatherData.temp = realtimeWeatherData.temp;
@@ -1183,13 +1169,13 @@
             evaluateWeatherTierAndColor();
         }
 
-        // 3. 🌟 [新增] 新版手動模擬設置 (提供給內部邏輯調用，保持相容)
+        // 3. 新版手動模擬設置 (提供給內部邏輯調用，保持相容)
+        // 🌟 [修正處] 將 toggleDemoWeather 的呼叫包裝在內，確保模擬設定正確運作
         function setDemoWeather(type, value) {
-            // 轉呼叫新版開關控制
             toggleDemoWeather(type, value);
         }
 
-        // 🌟 [修改處] 恢復即時數據時，自動將所有模擬開關重置並熄滅按鈕
+        // 恢復即時數據時，自動將所有模擬開關重置並熄滅按鈕
         function resetToRealtime() {
             demoActive = { temp: false, rain: false, wind: false };
             document.querySelectorAll(".demo-btn").forEach(btn => btn.classList.remove("active"));
