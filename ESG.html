@@ -767,7 +767,7 @@
             },
             "新北市": {
                 apiCode: "F-D0047-069",
-                districts: ["板橋區", "三重區", "受和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "鶯歌區", "三峽區", "瑞芳區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "万里區", "烏來區"]
+                districts: ["板橋區", "三重區", "中和區", "永和區", "新莊區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "鶯歌區", "三峽區", "瑞芳區", "五股區", "泰山區", "林口區", "深坑區", "石碇區", "坪林區", "三芝區", "石門區", "八里區", "平溪區", "雙溪區", "貢寮區", "金山區", "萬里區", "烏來區"]
             },
             "桃園市": {
                 apiCode: "F-D0047-005",
@@ -854,27 +854,22 @@
         
         let currentTab = 'temp';
 
-        // 🌟 [整理處] 追蹤開關狀態、實時數據暫存，與所有 Checkbox 的勾選記憶 (全部只保留唯一的這一次宣告！)
+        // 🌟 [整理處] 所有變數宣告，此處已做排重，僅保留唯一一次宣告
         let demoActive = { temp: false, rain: false, wind: false }; 
-        
         let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; 
-        
         let checkedStates = {
             t1: false, t2: false, t3: false,
             r1: false, r2: false, r3: false,
             w1: false, w2: false, w3: false
         };
-
         let activeWeatherData = {
             temp: 25,
             rain: 10,  
             wind: 3
         };
-
         let isDemoMode = false;
 
-        // 🌟 修正預設折抵比例 (0.1%、0.05%、0.01% 等) 
-        // 並且為雨量與風速導入「雙重閥值」規則配置
+        // 修正後的預設折扣率 (0.1%、0.05%、0.01%) 與雙重閥值
         const RULES_CONFIG = {
             temp: {
                 yellow_threshold: 36, yellow_rate: 0.0001, // 0.01%
@@ -883,11 +878,8 @@
             },
             rain: {
                 purple_threshold_24h: 500, purple_rate: 0.0025, // 0.25%
-                
                 red_threshold_24h: 350, red_threshold_3h: 200, red_rate: 0.0020, // 0.20%
-                
                 orange_threshold_24h: 200, orange_threshold_3h: 100, orange_rate: 0.0015, // 0.15%
-                
                 yellow_threshold_24h: 80, yellow_threshold_1h: 40, yellow_rate: 0.0010 // 0.10%
             },
             wind: {
@@ -970,7 +962,7 @@
             const apiCode = TW_DATA[county].apiCode;
             
             try {
-                // 在發送 fetch 請求前，呼叫 getFreshTurnstileToken() 自動在背景刷新 Token
+                // 自動刷新安全 Token
                 const activeToken = await getFreshTurnstileToken();
                 const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}&token=${activeToken}`;
 
@@ -1027,7 +1019,7 @@
                     const windValStr = safeFindValue(["風速", "Wind", "WindSpeed", "WD"], ["WindSpeed", "value"]) || "3";
                     const windMs = parseFloat(String(windValStr).replace(/[^0-9.]/g, '')) || 3; 
 
-                    // 換算衍生氣象數據
+                    // 換算衍生資料
                     const rainMm = parseFloat((popVal * 0.4).toFixed(1));
                     const windScale = convertMsToBeaufort(windMs);
 
@@ -1170,7 +1162,6 @@
         }
 
         // 3. 新版手動模擬設置 (提供給內部邏輯調用，保持相容)
-        // 🌟 [修正處] 將 toggleDemoWeather 的呼叫包裝在內，確保模擬設定正確運作
         function setDemoWeather(type, value) {
             toggleDemoWeather(type, value);
         }
@@ -1203,7 +1194,78 @@
             evaluateWeatherTierAndColor();
         }
 
-        // 🌟 [步驟 4 替換與新增在這裡]
+        function renderRules() {
+            const ruleDiv = document.getElementById("rule-content");
+            if (currentTab === 'temp') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-temperature-high"></i> 溫度判定與折扣規則 (可直接修改)：</h4>
+                    <ul>
+                        <li>🔴 紅色：氣溫達 <input type="number" id="cfg-temp-r" value="${RULES_CONFIG.temp.red_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-rr" value="${(RULES_CONFIG.temp.red_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟠 橘色：氣溫達 <input type="number" id="cfg-temp-o" value="${RULES_CONFIG.temp.orange_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-or" value="${(RULES_CONFIG.temp.orange_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                        <li>🟡 黃色：氣溫達 <input type="number" id="cfg-temp-y" value="${RULES_CONFIG.temp.yellow_threshold}" class="rule-input" oninput="updateConfig('temp')">°C 以上 ── 下次保費折抵 <input type="number" step="0.001" id="cfg-temp-yr" value="${(RULES_CONFIG.temp.yellow_rate * 100).toFixed(3)}" class="rule-input" oninput="updateConfig('temp')">%</li>
+                    </ul>
+                `;
+            } else if (currentTab === 'rain') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-cloud-showers-heavy"></i> 累積雨量與折扣規則 (可直接修改)：</h4>
+                    <ul>
+                        <li>🟣 紫色 (超大豪雨)：24小時雨量達 <input type="number" id="cfg-rain-p-24h" value="${RULES_CONFIG.rain.purple_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-pr" value="${(RULES_CONFIG.rain.purple_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🔴 紅色 (大豪雨)：24小時雨量達 <input type="number" id="cfg-rain-r-24h" value="${RULES_CONFIG.rain.red_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 3小時雨量達 <input type="number" id="cfg-rain-r-3h" value="${RULES_CONFIG.rain.red_threshold_3h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-rr" value="${(RULES_CONFIG.rain.red_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🟠 橘色 (豪雨)：24小時雨量達 <input type="number" id="cfg-rain-o-24h" value="${RULES_CONFIG.rain.orange_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 3小時雨量達 <input type="number" id="cfg-rain-o-3h" value="${RULES_CONFIG.rain.orange_threshold_3h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-or" value="${(RULES_CONFIG.rain.orange_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                        <li>🟡 黃色 (大雨)：24小時雨量達 <input type="number" id="cfg-rain-y-24h" value="${RULES_CONFIG.rain.yellow_threshold_24h}" class="rule-input" oninput="updateConfig('rain')">mm 或 1小時雨量達 <input type="number" id="cfg-rain-y-1h" value="${RULES_CONFIG.rain.yellow_threshold_1h}" class="rule-input" oninput="updateConfig('rain')">mm ── 保費折抵 <input type="number" step="0.01" id="cfg-rain-yr" value="${(RULES_CONFIG.rain.yellow_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('rain')">%</li>
+                    </ul>
+                `;
+            } else if (currentTab === 'wind') {
+                ruleDiv.innerHTML = `
+                    <h4><i class="fa-solid fa-wind"></i> 風速判定與折扣規則 (可直接修改)：</h4>
+                    <ul>
+                        <li>🔴 紅色燈號：平均風速達 <input type="number" id="cfg-wind-rm" value="${RULES_CONFIG.wind.red_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-rg" value="${RULES_CONFIG.wind.red_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-rr" value="${(RULES_CONFIG.wind.red_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟠 橙色燈號：平均風速達 <input type="number" id="cfg-wind-om" value="${RULES_CONFIG.wind.orange_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-og" value="${RULES_CONFIG.wind.orange_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-or" value="${(RULES_CONFIG.wind.orange_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                        <li>🟡 黃色燈號：平均風速達 <input type="number" id="cfg-wind-ym" value="${RULES_CONFIG.wind.yellow_mean}" class="rule-input" oninput="updateConfig('wind')">級 或 陣風達 <input type="number" id="cfg-wind-yg" value="${RULES_CONFIG.wind.yellow_gust}" class="rule-input" oninput="updateConfig('wind')">級 以上 ── 保費折抵 <input type="number" step="0.01" id="cfg-wind-yr" value="${(RULES_CONFIG.wind.yellow_rate * 100).toFixed(2)}" class="rule-input" oninput="updateConfig('wind')">%</li>
+                    </ul>
+                `;
+            }
+        }
+
+        function updateConfig(type) {
+            if (type === 'temp') {
+                RULES_CONFIG.temp.red_threshold = parseFloat(document.getElementById("cfg-temp-r").value) || 0;
+                RULES_CONFIG.temp.red_rate = (parseFloat(document.getElementById("cfg-temp-rr").value) || 0) / 100;
+                RULES_CONFIG.temp.orange_threshold = parseFloat(document.getElementById("cfg-temp-o").value) || 0;
+                RULES_CONFIG.temp.orange_rate = (parseFloat(document.getElementById("cfg-temp-or").value) || 0) / 100;
+                RULES_CONFIG.temp.yellow_threshold = parseFloat(document.getElementById("cfg-temp-y").value) || 0;
+                RULES_CONFIG.temp.yellow_rate = (parseFloat(document.getElementById("cfg-temp-yr").value) || 0) / 100;
+            } else if (type === 'rain') {
+                RULES_CONFIG.rain.purple_threshold_24h = parseFloat(document.getElementById("cfg-rain-p-24h").value) || 0;
+                RULES_CONFIG.rain.purple_rate = (parseFloat(document.getElementById("cfg-rain-pr").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.red_threshold_24h = parseFloat(document.getElementById("cfg-rain-r-24h").value) || 0;
+                RULES_CONFIG.rain.red_threshold_3h = parseFloat(document.getElementById("cfg-rain-r-3h").value) || 0;
+                RULES_CONFIG.rain.red_rate = (parseFloat(document.getElementById("cfg-rain-rr").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.orange_threshold_24h = parseFloat(document.getElementById("cfg-rain-o-24h").value) || 0;
+                RULES_CONFIG.rain.orange_threshold_3h = parseFloat(document.getElementById("cfg-rain-o-3h").value) || 0;
+                RULES_CONFIG.rain.orange_rate = (parseFloat(document.getElementById("cfg-rain-or").value) || 0) / 100;
+                
+                RULES_CONFIG.rain.yellow_threshold_24h = parseFloat(document.getElementById("cfg-rain-y-24h").value) || 0;
+                RULES_CONFIG.rain.yellow_threshold_1h = parseFloat(document.getElementById("cfg-rain-y-1h").value) || 0;
+                RULES_CONFIG.rain.yellow_rate = (parseFloat(document.getElementById("cfg-rain-yr").value) || 0) / 100;
+            } else if (type === 'wind') {
+                RULES_CONFIG.wind.red_mean = parseFloat(document.getElementById("cfg-wind-rm").value) || 0;
+                RULES_CONFIG.wind.red_gust = parseFloat(document.getElementById("cfg-wind-rg").value) || 0;
+                RULES_CONFIG.wind.red_rate = (parseFloat(document.getElementById("cfg-wind-rr").value) || 0) / 100;
+                
+                RULES_CONFIG.wind.orange_mean = parseFloat(document.getElementById("cfg-wind-om").value) || 0;
+                RULES_CONFIG.wind.orange_gust = parseFloat(document.getElementById("cfg-wind-og").value) || 0;
+                RULES_CONFIG.wind.orange_rate = (parseFloat(document.getElementById("cfg-wind-or").value) || 0) / 100;
+                
+                RULES_CONFIG.wind.yellow_mean = parseFloat(document.getElementById("cfg-wind-ym").value) || 0;
+                RULES_CONFIG.wind.yellow_gust = parseFloat(document.getElementById("cfg-wind-yg").value) || 0;
+                RULES_CONFIG.wind.yellow_rate = (parseFloat(document.getElementById("cfg-wind-yr").value) || 0) / 100;
+            }
+            evaluateWeatherTierAndColor();
+        }
+
         function renderCheckboxes() {
             const container = document.getElementById("checkboxes-container");
             container.innerHTML = "";
@@ -1224,7 +1286,7 @@
             calculateIncentive();
         }
 
-        // 🌟 [步驟 5 新增在這裡] 獨立的天氣要素警報判定器
+        // 獨立的天氣要素警報判定器
         function getTierForCategory(category) {
             if (category === 'temp') {
                 const t = activeWeatherData.temp;
@@ -1249,14 +1311,6 @@
         let currentActiveTier = null; 
         let currentRate = 0;
 
-        // 🌟 [修改處] 更新為氣象署官方雙重指標判定邏輯
-        function evaluateWeatherTierAndColor() {
-            const rightColumn = document.getElementById("right-column");
-            rightColumn.style.backgroundColor = "white"; 
-            currentActiveTier = null;
-            currentRate = 0;
-
-            // ❌ [將原本那一大串舊代碼刪除，完全替換為這段 10 行的版本]
         function evaluateWeatherTierAndColor() {
             const rightColumn = document.getElementById("right-column");
             rightColumn.style.backgroundColor = "white"; 
@@ -1269,7 +1323,6 @@
             calculateIncentive();
         }
 
-        // 🌟 [步驟 7 替換在這裡] 
         function calculateIncentive() {
             const premium = parseFloat(document.getElementById("premium-amount").value) || 0;
 
