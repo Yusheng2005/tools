@@ -1114,12 +1114,14 @@
             updateActiveWeatherData();
         }
 
-        // 2. 合併實時氣象與模擬覆寫的整合器
+        // 🌟 [修正版] 確保模擬開啟時，所有的衍生天氣變數 (包括降雨率、風速 m/s) 都完美與 AI 同步
         function updateActiveWeatherData() {
-            // 先載入實時氣象作為基準
+            // A. 先載入實時氣象作為基準 (🌟 同步補上 rain_pop 與 wind_speed 的基準載入)
             activeWeatherData.temp = realtimeWeatherData.temp;
             activeWeatherData.rain = realtimeWeatherData.rain;
             activeWeatherData.wind = realtimeWeatherData.wind;
+            activeWeatherData.rain_pop = realtimeWeatherData.rain_pop;
+            activeWeatherData.wind_speed = realtimeWeatherData.wind_speed;
             
             let displayTemp = realtimeWeatherData.temp;
             let displayPop = realtimeWeatherData.rain_pop;
@@ -1147,12 +1149,14 @@
                 displayTemp = 38.5;
             }
             if (demoActive.rain) {
-                activeWeatherData.rain = 520; // 模擬 520mm
+                activeWeatherData.rain = 520;       // 模擬 520mm
+                activeWeatherData.rain_pop = 100;   // 🌟 [新增] 同步寫入全域變數，供 AI 讀取
                 displayPop = 100;
                 displayRainMm = 520;
             }
             if (demoActive.wind) {
-                activeWeatherData.wind = 15; // 模擬 15級
+                activeWeatherData.wind = 15;        // 模擬 15級
+                activeWeatherData.wind_speed = 48.5; // 🌟 [新增] 同步寫入全域變數，供 AI 讀取
                 displayWindMs = 48.5;
                 displayWindScale = 15;
             }
