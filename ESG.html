@@ -1392,7 +1392,7 @@
             if (event.key === 'Enter') sendChatMessage();
         }
 
-        // 🌟 [修改處] 智慧客服 Minami 深度整合：即時讀取網頁天氣與保費資料，並給予精準對話回饋
+        // 🌟 [優化修正版] 深度結合商業邏輯與氣候常識，防止 AI 在晴天時胡亂催促保戶避險
         async function sendChatMessage() {
             const input = document.getElementById("chat-input");
             const query = input.value.trim();
@@ -1403,7 +1403,7 @@
 
             const loadingId = appendMessage("msg-bot", "系統分析中...");
 
-            // 🌟 1. 抓取網頁上目前的即時數據
+            // 1. 抓取網頁上目前的即時數據
             const county = document.getElementById("county-select").value || "未選擇縣市";
             const district = document.getElementById("district-select").value || "未選擇行政區";
             const temp = activeWeatherData.temp || "--";
@@ -1415,24 +1415,46 @@
             const points = document.getElementById("points-val").innerText || "0 點";
             const isDemo = isDemoMode ? "開啟中 (模擬數據)" : "關閉中 (實時氣象資料)";
 
-            // 檢查避險動作落實情況
-            const tempDone = checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成" : "未完成 (尚不符折抵條件)";
-            const rainDone = checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成" : "未完成 (尚不符折抵條件)";
-            const windDone = checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成" : "未完成 (尚不符折抵條件)";
+            // 🌟 2. 核心邏輯優化：動態判斷各項警報此時是否真的「亮起」
+            const tempResult = getTierForCategory('temp');
+            const rainResult = getTierForCategory('rain');
+            const windResult = getTierForCategory('wind');
 
-            // 🌟 2. 建立動態背景上下文 (Context)
+            const totalAlertsActive = (tempResult.tier ? 1 : 0) + (rainResult.tier ? 1 : 0) + (windResult.tier ? 1 : 0);
+
+            // 動態生成各項目的系統上下文 (Context)
+            const tempStatus = tempResult.tier 
+                ? `⚠️ 警告！已亮起 [氣溫 ${tempResult.label}警報]！保戶避險進度：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
+                : `🟢 正常。目前氣溫正常，未亮起氣溫警報。(此狀態下保戶不需執行氣溫防災避險，亦無此項折抵)`;
+
+            const rainStatus = rainResult.tier 
+                ? `⚠️ 警告！已亮起 [雨量 ${rainResult.label}警報]！保戶避險進度：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
+                : `🟢 正常。目前累積雨量正常，未亮起雨量警報。(此狀態下保戶不需執行雨量防災避險，亦無此項折抵)`;
+
+            const windStatus = windResult.tier 
+                ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！保戶避險進度：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
+                : `🟢 正常。目前風力級數正常，未亮起風速警報。(此狀態下保戶不需執行風速防災避險，亦無此項折抵)`;
+
+            const discountSummary = totalAlertsActive > 0
+                ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。保戶已落實對應避險，目前共獲得保費折抵 ${discount} 及防災點數 ${points}。`
+                : `目前天氣良好，無任何警報亮起。在無警報狀態下，保戶支付正常費率，不需要進行緊急防災避險，折抵金額為 $0 元。`;
+
+            // 🌟 3. 建立符合商業與物理常識的背景上下文
             const weatherContext = `
 【目前平台網頁數據狀態】
 - 目前選取位置：${county} ${district}
 - 現場即時氣候：氣溫 ${temp}°C、降雨機率 ${pop}%、累積降雨量 ${rainMm} mm、風速 ${windMs} m/s、風力級數 ${windScale} 級
 - 測試控制面板模式：${isDemo}
-- 避險動作落實情況：
-  * 氣溫避險：${tempDone}
-  * 雨量避險：${rainDone}
-  * 風速避險：${windDone}
-- 保戶當前累積利益：保費已折抵 ${discount}、已獲得防災綠色點數 ${points}
+- 各項指標狀態：
+  * 氣溫狀態：${tempStatus}
+  * 雨量狀態：${rainStatus}
+  * 風速狀態：${windStatus}
+- 平台精算結論：${discountSummary}
 
-指令：保戶若詢問「天氣如何」、「目前的狀況」、「我的折抵」、「避險進度」、「氣候」等問題，請直接引用上述的【目前平台網頁數據狀態】來回答他們，並給予對應的專業防災與保費折抵建議。若保戶尚未選擇地區，請禮貌引導他們在左側下拉選單選擇。
+【AI 客服對話指令規則】
+1. 請具備基本的物理與台灣氣候常識。例如：氣溫 31°C 是屬於「溫暖或炎熱」的天氣，絕對不能說是低溫或寒冷！請給予符合實際溫度的生活關懷與防災建議。
+2. 🌟 商業邏輯常識：如果當前「無任何警報亮起」（totalAlertsActive 為 0），請親切地告訴保戶：「目前 ${county}${district} 的天氣非常好，未達災害警報標準，因此您不需要進行緊急避險，支付的是正常費率喔！歡迎您在未來氣候變天時，再來參與我們的防災折抵計畫！」千萬不要在此狀態下責怪或催促保戶去勾選避險。
+3. 如果當前有警報亮起，且避險進度為「未勾滿 3 項」，請禮貌提醒他們需要全數完成才能啟用該項目的保費折抵與防災點數。
 `;
 
             try {
@@ -1445,7 +1467,6 @@
                         messages: [
                             {
                                 role: "system",
-                                // 🌟 將背景氣候上下文動態注入到系統提示詞中
                                 content: `你是一位專精於永續防災保險、ESG減損、綠色科技的智慧客服助理，名叫 Minami。請以繁體中文友善、親切、簡短精確地回答保戶問題，強調主動防災對永續環境與保費折抵的好處。\n\n${weatherContext}`
                             },
                             { role: "user", content: query }
