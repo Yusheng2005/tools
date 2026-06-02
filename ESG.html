@@ -1396,7 +1396,7 @@
             if (event.key === 'Enter') sendChatMessage();
         }
 
-        // 🌟 [修正版] 解決未選區當機 Bug，並為 Minami 注入「常以名字自稱」的親切人設
+        // 🌟 [修正作用域版] 解決變數 scope 限制導致的 rainMm is not defined 錯誤，保證連線暢通！
         async function sendChatMessage() {
             const input = document.getElementById("chat-input");
             const query = input.value.trim();
@@ -1415,9 +1415,42 @@
             const county = countySelect || "未選擇縣市";
             const district = districtSelect || "未選擇行政區";
 
-            // 🌟 2. 核心安全鎖：若未選區，直接跳過氣象解析，100% 防止 TypeError 崩潰
+            // 🌟 [核心修正] 將變數宣告移到最外層作用域，解決區域變數在大括弧外讀取不到而報錯的問題
+            const temp = activeWeatherData.temp || "25";
+            const pop = activeWeatherData.rain_pop || "0";
+            const rainMm = activeWeatherData.rain || "0";
+            const windMs = activeWeatherData.wind_speed || "3";
+            const windScale = activeWeatherData.wind || "0";
+            const discount = document.getElementById("discount-val").innerText || "$0";
+            const points = document.getElementById("points-val").innerText || "0 點";
+            const isDemo = isDemoMode ? "開啟中 (模擬數據)" : "關閉中 (實時氣象資料)";
+
+            // 2. 警報狀態計算
+            const tempResult = getTierForCategory('temp');
+            const rainResult = getTierForCategory('rain');
+            const windResult = getTierForCategory('wind');
+            const totalAlertsActive = (tempResult.tier ? 1 : 0) + (rainResult.tier ? 1 : 0) + (windResult.tier ? 1 : 0);
+
+            const tempStatus = tempResult.tier 
+                ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！避險狀態：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成" : "未完成"}`
+                : `🟢 正常。未亮起氣溫警報。`;
+
+            const rainStatus = rainResult.tier 
+                ? `⚠️ 已亮起 [雨量 ${rainResult.label}警報]！避險狀態：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成" : "未完成"}`
+                : `🟢 正常。未亮起雨量警報。`;
+
+            const windStatus = windResult.tier 
+                ? `⚠️ 已亮起 [風速 ${windResult.label}警報]！避險狀態：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成" : "未完成"}`
+                : `🟢 正常。未亮起風速警報。`;
+
+            const discountSummary = totalAlertsActive > 0
+                ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
+                : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
+
+            // 3. 動態決定要餵給 AI 的背景資料 (導入未選區防呆)
             let weatherStatusText = "";
             if (!isLocationSelected) {
+                // 如果保戶「沒選選區」，強制覆寫背景，防止 AI 胡謅氣候
                 weatherStatusText = `
 - 目前選取位置：【⚠️ 未選擇任何行政區！】
 - 氣候數據狀態：[無法取得資料]
@@ -1425,37 +1458,7 @@
 - 指令限制：保戶目前「尚未選擇地區」，請務必親切、幽默地指出他們忘記選擇地點（例如：「哎呀！您是不是忘記告訴我您在哪裡了呢？」），並強烈引導他們必須先在網頁左側下拉選單選擇「縣市」與「行政區」，您才能提供天氣與保險分析。絕對不能編造當前有 25°C 或任何預設天氣！
 `;
             } else {
-                // 已選選區才進行數據提取
-                const temp = activeWeatherData.temp || "25";
-                const pop = activeWeatherData.rain_pop || "0";
-                const rainMm = activeWeatherData.rain || "0";
-                const windMs = activeWeatherData.wind_speed || "3";
-                const windScale = activeWeatherData.wind || "0";
-                const discount = document.getElementById("discount-val").innerText || "$0";
-                const points = document.getElementById("points-val").innerText || "0 點";
-                const isDemo = isDemoMode ? "開啟中 (模擬數據)" : "關閉中 (實時氣象資料)";
-
-                const tempResult = getTierForCategory('temp');
-                const rainResult = getTierForCategory('rain');
-                const windResult = getTierForCategory('wind');
-                const totalAlertsActive = (tempResult.tier ? 1 : 0) + (rainResult.tier ? 1 : 0) + (windResult.tier ? 1 : 0);
-
-                const tempStatus = tempResult.tier 
-                    ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！避險狀態：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成" : "未完成"}`
-                    : `🟢 正常。未亮起氣溫警報。`;
-
-                const rainStatus = rainResult.tier 
-                    ? `⚠️ 已亮起 [雨量 ${rainResult.label}警報]！避險狀態：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成" : "未完成"}`
-                    : `🟢 正常。未亮起雨量警報。`;
-
-                const windStatus = windResult.tier 
-                    ? `⚠️ 已亮起 [風速 ${windResult.label}警報]！避險狀態：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成" : "未完成"}`
-                    : `🟢 正常。未亮起風速警報。`;
-
-                const discountSummary = totalAlertsActive > 0
-                    ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
-                    : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
-
+                // 如果「已選選區」，正常帶入數據
                 weatherStatusText = `
 - 目前選取位置：${county} ${district}
 - 現場即時氣候：氣溫 ${temp}°C、降雨機率 ${pop}%、累積降雨量 ${rainMm} mm、風速 ${windMs} m/s、風力級數 ${windScale} 級
@@ -1468,16 +1471,16 @@
 `;
             }
 
-            // 🌟 3. 建立 AI 提示詞 (寫入 Minami 自稱人設與帶傘建議)
+            // 4. 建立 AI 大腦設定檔 (融入帶雨傘與風災決策樹)
             const weatherContext = `
 ${weatherStatusText}
 
 【AI 客服對話指令規則】
-1. 請具備基本的物理與台灣氣候常識。例如：氣溫 31°C 是屬於「溫暖或炎熱」的天氣，絕對不能說是低溫或寒冷！
+1. 請具備基本的物理與台灣氣候常識。例如：氣溫 31°C 是屬於「溫慢或炎熱」的天氣，絕對不能說是低溫或寒冷！
 2. 商業邏輯與語意常識：
    - 如果已選選區且當前「無任何警報亮起」（totalAlertsActive 為 0），請親切地告訴保戶目前天氣良好，未達災害警報標準，因此不需要進行緊急避險。
-   - 🌟 [語意導正] 如果當前有任何災害警報亮起（例如暴雨），請將其描述為「嚴正的防災防汛任務」，千萬不要說出「天氣很適合避險/很適合防災」這種不自然的句子。請用「因應目前嚴峻的氣候，建議您盡快落實避險動作以確保生命財產安全...」等口吻。
-3. 🌟 帶雨傘與天氣防護建議：當用戶詢問「需要帶傘嗎」、「出門要帶傘嗎」或「會下雨嗎」等問題時：
+   - 如果當前有任何災害警報亮起（例如暴雨），請將其描述為「嚴正的防災防汛任務」，千萬不要說出「天氣很適合避險/很適合防災」這種不自然的句子。請用「因應目前嚴峻的氣候，建議您盡快落實避險動作以確保生命財產安全...」等口吻。
+3. 帶雨傘與天氣防護建議：當用戶詢問「需要帶傘嗎」、「出門要帶傘嗎」或「會下雨嗎」等問題時：
    - 若「未選擇任何地區」，請先引導他們在網頁左側選單選擇地區。
    - 若「已選區」，請依據「累積降雨量 (rainMm)」進行更符合常理的智慧判斷：
      * 若雨量達 200mm 以上（已達豪雨、大豪雨或超大豪雨等級）：請嚴正警告保戶累積降雨高達 ${rainMm} mm！這時「一般的摺疊傘或雨傘已經完全擋不住了」，請呼籲保戶儘量避免非必要的出門，若必須出門應穿著防風重裝雨衣，並強烈警惕低窪地區積水與土石流。
@@ -1486,8 +1489,9 @@ ${weatherStatusText}
      * 若降雨機率 < 30%：目前降雨機率極低（僅 ${pop}%），可以不用帶傘，享受好天氣！
 4. 說話風格與人設自稱：
    - 請經常在對話中以自己的名字自稱（例如：「Minami 建議您...」、「Minami 覺得當前天氣...」、「這對 Minami 來說也很重要！」）。
-   - 請注意保持對話的自然流暢度，不要每一句話都死板地以「Minami」開頭，而是要在句子中自然地穿插自稱。
+   - 請注意保持對話的自然流暢度，不要每一句話都一成不變地以「Minami」開頭，而是要在句子中自然地穿插自稱。
 `;
+
             try {
                 // 將請求 POST 送往您的 Cloudflare Worker URL
                 const response = await fetch(CLOUDFLARE_WORKER_URL, {
@@ -1515,7 +1519,7 @@ ${weatherStatusText}
                 }
             } catch (err) {
                 console.error("無法連線至本地 Ollama", err);
-                document.getElementById(loadingId).innerText = "【Demo 備用回覆】AI 客服伺服器暫時處於離線狀態，請確保您的個人運算節點與內網穿透已正常開啟。";
+                document.getElementById(loadingId).innerText = "【Demo 備用回覆】AI 客服伺言器暫時處於離線狀態，請確保您的個人運算節點與內網穿透已正常開啟。";
             }
         }
 
