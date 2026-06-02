@@ -1392,7 +1392,7 @@
             if (event.key === 'Enter') sendChatMessage();
         }
 
-        // 🌟 [優化修正版] 深度結合商業邏輯與氣候常識，防止 AI 在晴天時胡亂催促保戶避險
+        // 🌟 [優化防呆版] 智慧客服 Minami：整合「未選區防呆」與「帶雨傘智慧建議」
         async function sendChatMessage() {
             const input = document.getElementById("chat-input");
             const query = input.value.trim();
@@ -1403,9 +1403,13 @@
 
             const loadingId = appendMessage("msg-bot", "系統分析中...");
 
-            // 1. 抓取網頁上目前的即時數據
-            const county = document.getElementById("county-select").value || "未選擇縣市";
-            const district = document.getElementById("district-select").value || "未選擇行政區";
+            // 1. 抓取網頁上目前的選區狀態
+            const countySelect = document.getElementById("county-select").value;
+            const districtSelect = document.getElementById("district-select").value;
+            const isLocationSelected = countySelect && districtSelect; // 判斷是否「兩者皆選」
+
+            const county = countySelect || "未選擇縣市";
+            const district = districtSelect || "未選擇行政區";
             const temp = activeWeatherData.temp || "--";
             const pop = activeWeatherData.rain_pop || "0";
             const rainMm = activeWeatherData.rain || "0";
@@ -1415,33 +1419,41 @@
             const points = document.getElementById("points-val").innerText || "0 點";
             const isDemo = isDemoMode ? "開啟中 (模擬數據)" : "關閉中 (實時氣象資料)";
 
-            // 🌟 2. 核心邏輯優化：動態判斷各項警報此時是否真的「亮起」
+            // 2. 警報狀態計算
             const tempResult = getTierForCategory('temp');
             const rainResult = getTierForCategory('rain');
             const windResult = getTierForCategory('wind');
-
             const totalAlertsActive = (tempResult.tier ? 1 : 0) + (rainResult.tier ? 1 : 0) + (windResult.tier ? 1 : 0);
 
-            // 動態生成各項目的系統上下文 (Context)
             const tempStatus = tempResult.tier 
-                ? `⚠️ 警告！已亮起 [氣溫 ${tempResult.label}警報]！保戶避險進度：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
-                : `🟢 正常。目前氣溫正常，未亮起氣溫警報。(此狀態下保戶不需執行氣溫防災避險，亦無此項折抵)`;
+                ? `⚠️ 警告！已亮起 [氣溫 ${tempResult.label}警報]！避險狀態：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成 (符合折抵)" : "未完成 (需在右側勾選完成)"}`
+                : `🟢 正常。未亮起氣溫警報。(無此項折抵)`;
 
             const rainStatus = rainResult.tier 
-                ? `⚠️ 警告！已亮起 [雨量 ${rainResult.label}警報]！保戶避險進度：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
-                : `🟢 正常。目前累積雨量正常，未亮起雨量警報。(此狀態下保戶不需執行雨量防災避險，亦無此項折抵)`;
+                ? `⚠️ 警告！已亮起 [雨量 ${rainResult.label}警報]！避險狀態：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成 (符合折抵)" : "未完成 (需在右側勾選完成)"}`
+                : `🟢 正常。未亮起雨量警報。(無此項折抵)`;
 
             const windStatus = windResult.tier 
-                ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！保戶避險進度：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成 (符合折抵資格)" : "未勾滿 3 項 (保戶需要在右側勾選完成才能獲得折抵)"}`
-                : `🟢 正常。目前風力級數正常，未亮起風速警報。(此狀態下保戶不需執行風速防災避險，亦無此項折抵)`;
+                ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！避險狀態：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成 (符合折抵)" : "未完成 (需在右側勾選完成)"}`
+                : `🟢 正常。未亮起風速警報。(無此項折抵)`;
 
             const discountSummary = totalAlertsActive > 0
-                ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。保戶已落實對應避險，目前共獲得保費折抵 ${discount} 及防災點數 ${points}。`
-                : `目前天氣良好，無任何警報亮起。在無警報狀態下，保戶支付正常費率，不需要進行緊急防災避險，折抵金額為 $0 元。`;
+                ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
+                : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
 
-            // 🌟 3. 建立符合商業與物理常識的背景上下文
-            const weatherContext = `
-【目前平台網頁數據狀態】
+            // 🌟 3. 動態決定要餵給 AI 的背景資料 (導入未選區防呆)
+            let weatherStatusText = "";
+            if (!isLocationSelected) {
+                // 如果保戶「沒選選區」，強制覆寫背景，防止 AI 胡謅氣候
+                weatherStatusText = `
+- 目前選取位置：【⚠️ 未選擇任何行政區！】
+- 氣候數據狀態：[無法取得資料]
+- 避險與精算結論：[無法試算保費]
+- 指令限制：保戶目前「尚未選擇地區」，請務必親切、幽默地指出他們忘記選擇地點（例如：「哎呀！您是不是忘記告訴我您在哪裡了呢？」），並強烈引導他們必須先在網頁左側下拉選單選擇「縣市」與「行政區」，您才能提供天氣與保險分析。絕對不能假裝當前有 25°C 或任何預設天氣！
+`;
+            } else {
+                // 如果「已選選區」，正常帶入數據
+                weatherStatusText = `
 - 目前選取位置：${county} ${district}
 - 現場即時氣候：氣溫 ${temp}°C、降雨機率 ${pop}%、累積降雨量 ${rainMm} mm、風速 ${windMs} m/s、風力級數 ${windScale} 級
 - 測試控制面板模式：${isDemo}
@@ -1450,11 +1462,22 @@
   * 雨量狀態：${rainStatus}
   * 風速狀態：${windStatus}
 - 平台精算結論：${discountSummary}
+`;
+            }
+
+            // 🌟 4. 建立 AI 大腦設定檔 (融入帶雨傘決策樹)
+            const weatherContext = `
+${weatherStatusText}
 
 【AI 客服對話指令規則】
-1. 請具備基本的物理與台灣氣候常識。例如：氣溫 31°C 是屬於「溫暖或炎熱」的天氣，絕對不能說是低溫或寒冷！請給予符合實際溫度的生活關懷與防災建議。
-2. 🌟 商業邏輯常識：如果當前「無任何警報亮起」（totalAlertsActive 為 0），請親切地告訴保戶：「目前 ${county}${district} 的天氣非常好，未達災害警報標準，因此您不需要進行緊急避險，支付的是正常費率喔！歡迎您在未來氣候變天時，再來參與我們的防災折抵計畫！」千萬不要在此狀態下責怪或催促保戶去勾選避險。
-3. 如果當前有警報亮起，且避險進度為「未勾滿 3 項」，請禮貌提醒他們需要全數完成才能啟用該項目的保費折抵與防災點數。
+1. 請具備基本的物理與台灣氣候常識。例如：氣溫 31°C 是屬於「溫暖或炎熱」的天氣，絕對不能說是低溫或寒冷！
+2. 商業邏輯常識：如果已選選區且當前「無任何警報亮起」（totalAlertsActive 為 0），請親切地告訴保戶目前天氣良好，未達災害警報標準，因此不需要進行緊急避險。千萬不要在此狀態下催促保戶去勾選避險。
+3. 🌟 帶雨傘與天氣防護建議：當用戶詢問「需要帶傘嗎」、「出門要帶傘嗎」或「會下雨嗎」等問題時：
+   - 若「未選擇任何地區」，請先引導他們在網頁左選區。
+   - 若「已選區」，請根據背景資料中的「降雨機率」進行判斷回答：
+     * 降雨機率 >= 70%：指出降雨機率高達 ${pop}%，強烈建議出門攜帶雨傘或雨具！
+     * 降雨機率在 30% ~ 69% 之間：降雨機率為 ${pop}%，有降雨可能，建議隨身攜帶折疊傘以備不時之需。
+     * 降雨機率 < 30%：降雨機率非常低（僅 ${pop}%），可以放心不帶傘，享受好天氣！
 `;
 
             try {
