@@ -1392,6 +1392,7 @@
             if (event.key === 'Enter') sendChatMessage();
         }
 
+        // 🌟 [修改處] 將 AI 聊天對話透過 Cloudflare Worker 進行安全轉發
         async function sendChatMessage() {
             const input = document.getElementById("chat-input");
             const query = input.value.trim();
@@ -1403,15 +1404,16 @@
             const loadingId = appendMessage("msg-bot", "系統分析中...");
 
             try {
-                const response = await fetch("http://localhost:11434/api/chat", {
+                // 將請求 POST 送往您的 Cloudflare Worker URL (遮蔽個人 IP)
+                const response = await fetch(CLOUDFLARE_WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        model: "qwen2.5:7b",
+                        model: "qwen2.5:7b", // 呼叫您的本地模型 (也可改為 climatebeaver-ai)
                         messages: [
                             {
                                 role: "system",
-                                content: "你是一位專精於永續防災保險、ESG減損、綠色科技的智能客服助理。請以繁體中文友善、簡短扼要回答保戶問題，強調主動防災對永續環境與保費折抵的好處。"
+                                content: "你是一位專精於永續防災保險、ESG減損、綠色科技的智能客服助理。請以繁體中文友善、簡短精確地回答保戶問題，強調主動防災對永續環境與保費折抵的好處。"
                             },
                             { role: "user", content: query }
                         ],
@@ -1420,10 +1422,15 @@
                 });
 
                 const data = await response.json();
-                document.getElementById(loadingId).innerText = data.message.content;
+                
+                if (data.error) {
+                    document.getElementById(loadingId).innerText = `【系統提示】${data.error}`;
+                } else {
+                    document.getElementById(loadingId).innerText = data.message.content;
+                }
             } catch (err) {
                 console.error("無法連線至本地 Ollama", err);
-                document.getElementById(loadingId).innerText = "【Demo 備用回覆】本機未偵測到 Ollama 運作。請確保已執行 `ollama run qwen2.5:7b` 並開啟 OLLAMA_ORIGINS=\"*\" 的 CORS 存取設定。";
+                document.getElementById(loadingId).innerText = "【Demo 備用回覆】AI 客服伺服器暫時處於離線狀態，請確保您的個人運算節點與內網穿透已正常開啟。";
             }
         }
 
