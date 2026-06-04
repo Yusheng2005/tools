@@ -957,14 +957,13 @@
         };
 
         // ==========================================
-        // 2. 串接設定
+        // 2. 串接與平台變數設定
         // ==========================================
         const CLOUDFLARE_WORKER_URL = "https://esg-platform.y-ys-sl-l1226.workers.dev"; 
         
         let currentTab = 'temp';
         let isB2BViewActive = false; // 追蹤目前是個人(B2C)還是企業(B2B)檢視
 
-        // 🌟 [整理處] 所有變數宣告，此處已做排重，僅保留唯一一次宣告
         let demoActive = { temp: false, rain: false, wind: false }; 
         let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; 
         let checkedStates = {
@@ -979,7 +978,6 @@
         };
         let isDemoMode = false;
 
-        // 修正後的預設折扣率 (0.1%、0.05%、0.01%) 與雙重閥值
         const RULES_CONFIG = {
             temp: {
                 yellow_threshold: 36, yellow_rate: 0.0001, // 0.01%
@@ -999,7 +997,6 @@
             }
         };
 
-        // 避險動作清單 (全部為 3 項)
         const MITIGATION_ITEMS = {
             temp: [
                 { id: "t1", text: "已開啟廠區屋頂/外牆灑水降溫系統" },
@@ -1505,7 +1502,7 @@
 
             // 🌟 [核心修改] 將網頁上 3 個分頁中共 9 項特定的避險動作文字與勾選進度，逐字打包進系統背景
             const tempStatus = tempResult.tier 
-                ? `⚠️ 警告！已亮起 [氣溫 ${tempResult.label}警報]！
+                ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！
                    保戶必須在網頁右側完成並勾選以下「3 項特定氣溫避險動作」才能獲得此項折抵：
                    - 「已開啟廠區屋頂/外牆灑水降溫系統」 (狀態：${checkedStates.t1 ? "已完成" : "未完成"})
                    - 「已啟用節能通風空調系統並監測用電負載」 (狀態：${checkedStates.t2 ? "已完成" : "未完成"})
@@ -1524,7 +1521,7 @@
                 ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！
                    保戶必須在網頁右側完成並勾選以下「3 項特定風速避險動作」才能獲得此項折抵：
                    - 「室外廣告招牌、帆布、排風管已完成補強或收合」 (狀態：${checkedStates.w1 ? "已完成" : "未完成"})
-                   - 「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
+                   - 「玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
                    - 「已暫停高空與戶外危險作業，人員全數撤回安全室內」 (狀態：${checkedStates.w3 ? "已完成" : "未完成"})`
                 : `🟢 正常。未亮起風速警報。(無此項折抵)`;
 
@@ -1532,7 +1529,7 @@
                 ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
                 : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
 
-            // 3. 動態決定要餵給 AI 的背景資料
+            // 3. 動態決定要餵給 AI 的背景資料 (導入未選區防呆)
             let weatherStatusText = "";
             if (!isLocationSelected) {
                 weatherStatusText = `
@@ -1574,7 +1571,7 @@ ${weatherStatusText}
    - 當目前有任何災害警報亮起，且用戶詢問「如何避險」、「要怎麼折抵保費」、「避險動作」等問題時，請務必對照上方【各項指標狀態】中列出的 **3 項特定避險項目** 與目前的 **[已完成/未完成]** 進度，逐字進行精準的引導：
      * **若氣溫警報亮起**：請務必引導並提及「開啟廠區屋頂/外牆灑水降溫系統」、「啟用節能通風空調系統並監測用電負載」與「啟動備用儲冰/蓄冷系統以分散用電尖峰」這三個在網頁右側的特定動作。
      * **若雨量警報亮起**：請務必引導並提及「一樓門市/倉庫裝設防水閘門或堆疊防汛沙包」、「一樓高單價貨物/庫存移至高處」與「高風險泡水車輛移至高處避難停車場」這三個在網頁右側的特定動作。
-     * **若風速警報亮起**：請務必引導並提及「室外廣告招牌、帆布、排風管完成補強或收合」與「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」與「已暫停高空與戶外危險作業，人員全數撤回安全室內」這三個在網頁右側的特定動作。
+     * **若風速警報亮起**：請務必引導並提及「室外廣告招牌、帆布、排風管完成補強或收合」、「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」與「已暫停高空與戶外危險作業，人員全數撤回安全室內」這三個在網頁右側的特定動作。
    - 說話時，請將這些「網頁上要勾選的實體動作」與您口頭上的生活防災建議完美結合。
 5. 說話風格與人設自稱：
    - 請經常在對話中以自己的名字自稱（例如：「Minami 建議您...」、「Minami 覺得當前天氣...」）。
@@ -1611,10 +1608,8 @@ ${weatherContext}`
                 if (data.error) {
                     document.getElementById(loadingId).innerText = `【系統提示】${data.error}`;
                 } else {
-                    // 🌟 [步驟 2] 讀取 AI 原始回覆內容
                     let replyText = data.message.content;
 
-                    // 如果 OpenCC 轉換庫載入成功，執行「大陸簡體與詞彙 -> 台灣標準繁體中文與詞彙」的強制轉換
                     if (typeof OpenCC !== "undefined") {
                         const converter = OpenCC.Converter({ from: 'cn', to: 'twp' }); 
                         replyText = converter(replyText); // 執行強制轉換 (不影響英文與數字)
@@ -1707,7 +1702,7 @@ ${weatherContext}`
             // 1. 同步綠色點數 KPI
             document.getElementById("b2b-kpi-points").innerText = totalPoints;
 
-            // 2. 判斷是否有任何警報正在亮起
+            // 2. 判斷是否有裝任何警報正在亮起
             const tempResult = getTierForCategory('temp');
             const rainResult = getTierForCategory('rain');
             const windResult = getTierForCategory('wind');
