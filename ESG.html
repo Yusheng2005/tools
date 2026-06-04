@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClimateBeaver AI 平台</title>
     
-    <!-- 🌟 [修改處] 修正 display:none 導致背景重設驗證碼卡死的問題，並加入 1.5 秒超時安全機制 -->
+    <!-- 🌟 [安全控制] 將 Token 變數與解鎖函式移到最上方定義 -->
     <script>
         let turnstileToken = ""; // 全域儲存最新 Token
         let isTokenUsed = false; // 標記目前 Token 是否已被 Worker 使用過
@@ -40,7 +40,7 @@
 
                 console.log("[Turnstile] 正在為新請求自動刷新安全憑證...");
                 
-                // 🌟 設立 1.5 秒超時機制，防止在簡報現場因為網路慢或瀏覽器優化而卡在載入畫面
+                // 🌟 設立 1.5 秒安全超時機制，防止在簡報現場因網路卡頓而無法載入
                 const timeoutId = setTimeout(() => {
                     console.warn("[Turnstile] 刷新憑證超時，使用備用舊憑證直接載入，確保簡報順暢。");
                     resolve(turnstileToken); // 逾時自動回傳舊的 Token，直接放行
@@ -76,7 +76,7 @@
     </script>
     <!-- 🌟 引入 Turnstile 腳本 -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    <!-- 🌟 [步驟 1 加在這一行] 引入 OpenCC 繁簡強制轉換腳本 -->
+    <!-- 🌟 引入 OpenCC 繁簡強制轉換腳本 -->
     <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.3.0/dist/umd/full.js"></script>
     <!-- 引入 FontAwesome 圖標 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -89,7 +89,7 @@
             --accent-mint: #52b788;
             --bg-color: #f4f9f4;
             --text-dark: #2d3748;
-             /* 🌟 [修改處] 加重警報呈現底色，讓視覺對比更強烈 */
+            /* 加重警報呈現底色，讓視覺對比更強烈 */
             --warning-yellow: #ffe066; /* 飽和金黃 */
             --warning-orange: #ffb84d; /* 飽和橘黃 */
             --warning-red: #ff8787;    /* 飽和亮紅 */
@@ -111,7 +111,7 @@
             min-height: 100vh;
         }
 
-        /* 🌟 [修改處] 安全防護遮罩層 CSS，改用 visibility 控制顯示與隱藏 */
+        /* 安全防護遮罩層 CSS，改用 visibility 控制顯示與隱藏 */
         #security-overlay {
             position: fixed;
             top: 0;
@@ -130,7 +130,7 @@
             padding: 20px;
             box-sizing: border-box;
             
-            /* 🌟 使用 transition 來控制顯示/隱藏，不使用 display: none */
+            /* 使用 transition 來控制顯示/隱藏，不使用 display: none */
             transition: opacity 0.4s ease, visibility 0.4s ease;
             opacity: 1;
             visibility: visible;
@@ -591,7 +591,8 @@
             border: 1px solid #cbd5e1;
             border-radius: 4px;
         }
-/* 🌟 [新增] 模擬按鈕恆亮樣式 */
+
+        /* 🌟 模擬按鈕恆亮樣式 */
         .demo-btn.active {
             background-color: var(--medium-green) !important;
             color: white !important;
@@ -599,21 +600,25 @@
             box-shadow: 0 0 10px rgba(45, 106, 79, 0.4);
             font-weight: bold;
         }
-/* 🌟 [步驟 2 新增在這裡] B2B 企業後台專用表格與排版 CSS */
-    #b2b-view table th, #b2b-view table td {
-        border-bottom: 1px solid #f1f5f9;
-        padding: 12px 8px;
-    }
-    /* ... 更多 B2B CSS 樣式 ... */
 
-    /* [先前加入的] 模擬按鈕恆亮樣式 */
-    .demo-btn.active {
-        background-color: var(--medium-green) !important;
-        color: white !important;
-        border-color: var(--primary-green) !important;
-        box-shadow: 0 0 10px rgba(45, 106, 79, 0.4);
-        font-weight: bold;
-    }
+        /* 🌟 B2B 企業後台專用表格與排版 CSS */
+        #b2b-view table th, #b2b-view table td {
+            border-bottom: 1px solid #f1f5f9;
+            padding: 12px 8px;
+        }
+
+        .b2b-status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .badge-normal { background-color: #e2e8f0; color: #64748b; }
+        .badge-warning { background-color: #fef3c7; color: #d97706; }
+        .badge-danger { background-color: #fee2e2; color: #ef4444; }
+        .badge-success { background-color: #d1fae5; color: #065f46; }
     </style>
 </head>
 <body>
@@ -622,7 +627,6 @@
     <div id="security-overlay">
         <h2><i class="fa-solid fa-shield-halved"></i> ClimateBeaver AI 安全驗證</h2>
         <p>為了防範機器人惡意攻擊並保障系統安全，請先完成驗證以解鎖平台：</p>
-        <!-- 驗證碼框，使用您的 Site Key -->
         <div class="cf-turnstile" data-sitekey="0x4AAAAAADbOo3LdsoUlarr0" data-callback="onTurnstileSuccess"></div>
     </div>
 
@@ -865,7 +869,6 @@
         </div>
     </div>
 
-    <!-- 🌟 [緊接著為原本的 JavaScript] -->
     <!-- JavaScript 邏輯控制 -->
     <script>
         // ==========================================
@@ -963,13 +966,14 @@
         };
 
         // ==========================================
-        // 2. 串接與平台變數設定
+        // 2. 串接設定
         // ==========================================
         const CLOUDFLARE_WORKER_URL = "https://esg-platform.y-ys-sl-l1226.workers.dev"; 
         
         let currentTab = 'temp';
         let isB2BViewActive = false; // 追蹤目前是個人(B2C)還是企業(B2B)檢視
 
+        // 🌟 [整理處] 所有變數宣告，此處已做排重，僅保留唯一一次宣告
         let demoActive = { temp: false, rain: false, wind: false }; 
         let realtimeWeatherData = { temp: 25, rain_pop: 10, wind_speed: 3, rain: 4, wind: 2 }; 
         let checkedStates = {
@@ -984,6 +988,7 @@
         };
         let isDemoMode = false;
 
+        // 修正後的預設折扣率 (0.1%、0.05%、0.01%) 與雙重閥值
         const RULES_CONFIG = {
             temp: {
                 yellow_threshold: 36, yellow_rate: 0.0001, // 0.01%
@@ -1003,6 +1008,7 @@
             }
         };
 
+        // 避險動作清單 (全部為 3 項)
         const MITIGATION_ITEMS = {
             temp: [
                 { id: "t1", text: "已開啟廠區屋頂/外牆灑水降溫系統" },
@@ -1075,6 +1081,7 @@
             const apiCode = TW_DATA[county].apiCode;
             
             try {
+                // 自動刷新安全 Token
                 const activeToken = await getFreshTurnstileToken();
                 const url = `${CLOUDFLARE_WORKER_URL}?apiCode=${apiCode}&district=${encodeURIComponent(district)}&token=${activeToken}`;
 
@@ -1131,9 +1138,11 @@
                     const windValStr = safeFindValue(["風速", "Wind", "WindSpeed", "WD"], ["WindSpeed", "value"]) || "3";
                     const windMs = parseFloat(String(windValStr).replace(/[^0-9.]/g, '')) || 3; 
 
+                    // 換算衍生資料
                     const rainMm = parseFloat((popVal * 0.4).toFixed(1));
                     const windScale = convertMsToBeaufort(windMs);
 
+                    // 暫存真實數據
                     realtimeWeatherData = {
                         temp: tempVal,
                         rain_pop: popVal,
@@ -1142,6 +1151,7 @@
                         wind: windScale
                     };
 
+                    // 呼叫合併整合器
                     updateActiveWeatherData();
 
                 } else {
@@ -1153,11 +1163,13 @@
             }
         }
 
+        // 調整離線模擬，使其與新 UI 參數一致
         function simulateFallbackWeather(county, district) {
             const mockTemp = parseFloat((24 + Math.random() * 8).toFixed(1));
             const mockPop = Math.floor(Math.random() * 100);
             const mockWindMs = parseFloat((1 + Math.random() * 5).toFixed(1));
 
+            // 即時換算
             const rainMm = parseFloat((mockPop * 0.4).toFixed(1));
             const windScale = convertMsToBeaufort(mockWindMs);
 
@@ -1172,6 +1184,7 @@
             updateActiveWeatherData();
         }
 
+        // 標準蒲福風級 (Beaufort Scale) 換算器
         function convertMsToBeaufort(ms) {
             if (ms < 0.3) return 0;
             if (ms <= 1.5) return 1;
@@ -1193,6 +1206,7 @@
             return 17;
         }
 
+        // 擴充 UI 看板更新欄位
         function updateWeatherUI(temp, rainPop, windMs, sourceTag, rainMm, windScale) {
             document.getElementById("temp-display").innerText = `${temp}°C`;
             document.getElementById("pop-display").innerText = `${rainPop}%`;
@@ -1205,20 +1219,23 @@
         // ==========================================
         // 4. DEMO 現場手動模擬功能
         // ==========================================
+        // 1. 開關切換控制：點擊按鈕恆亮，再點一次熄滅恢復
         function toggleDemoWeather(type, value) {
-            demoActive[type] = !demoActive[type]; 
+            demoActive[type] = !demoActive[type]; // 切換開關狀態
             
             const btn = document.getElementById(`demo-btn-${type}`);
             if (demoActive[type]) {
-                btn.classList.add("active"); 
+                btn.classList.add("active"); // 恆亮
             } else {
-                btn.classList.remove("active"); 
+                btn.classList.remove("active"); // 熄滅
             }
             
             updateActiveWeatherData();
         }
 
+        // 🌟 [修正版] 確保模擬開啟時，所有的衍生天氣變數 (包括降雨率、風速 m/s) 都完美與 AI 同步
         function updateActiveWeatherData() {
+            // A. 先載入實時氣象作為基準 (🌟 同步補上 rain_pop 與 wind_speed 的基準載入)
             activeWeatherData.temp = realtimeWeatherData.temp;
             activeWeatherData.rain = realtimeWeatherData.rain;
             activeWeatherData.wind = realtimeWeatherData.wind;
@@ -1232,6 +1249,7 @@
             let displayWindScale = realtimeWeatherData.wind;
             let sourceTag = "透過 Cloudflare 安全串接";
 
+            // 檢查是否有任何模擬按鈕在「恆亮」狀態
             const hasActiveDemo = demoActive.temp || demoActive.rain || demoActive.wind;
             if (hasActiveDemo) {
                 isDemoMode = true;
@@ -1244,19 +1262,20 @@
                 document.getElementById("location-display").innerText = county ? `${county} ${district}` : "請先選擇區域";
             }
 
+            // 依據恆亮狀態覆寫變數
             if (demoActive.temp) {
-                activeWeatherData.temp = 38.5; 
+                activeWeatherData.temp = 38.5; // 模擬 38.5度
                 displayTemp = 38.5;
             }
             if (demoActive.rain) {
-                activeWeatherData.rain = 520;       
-                activeWeatherData.rain_pop = 100;   
+                activeWeatherData.rain = 520;       // 模擬 520mm
+                activeWeatherData.rain_pop = 100;   // 🌟 [新增] 同步寫入全域變數，供 AI 讀取
                 displayPop = 100;
                 displayRainMm = 520;
             }
             if (demoActive.wind) {
-                activeWeatherData.wind = 15;        
-                activeWeatherData.wind_speed = 48.5; 
+                activeWeatherData.wind = 15;        // 模擬 15級
+                activeWeatherData.wind_speed = 48.5; // 🌟 [新增] 同步寫入全域變數，供 AI 讀取
                 displayWindMs = 48.5;
                 displayWindScale = 15;
             }
@@ -1265,10 +1284,12 @@
             evaluateWeatherTierAndColor();
         }
 
+        // 3. 新版手動模擬設置 (提供給內部邏輯調用，保持相容)
         function setDemoWeather(type, value) {
             toggleDemoWeather(type, value);
         }
 
+        // 恢復即時數據時，自動將所有模擬開關重置並熄滅按鈕
         function resetToRealtime() {
             demoActive = { temp: false, rain: false, wind: false };
             document.querySelectorAll(".demo-btn").forEach(btn => btn.classList.remove("active"));
@@ -1349,6 +1370,7 @@
             calculateIncentive();
         }
 
+        // 獨立的天氣要素警報判定器
         function getTierForCategory(category) {
             if (category === 'temp') {
                 const t = activeWeatherData.temp;
@@ -1388,24 +1410,29 @@
         function calculateIncentive() {
             const premium = parseFloat(document.getElementById("premium-amount").value) || 0;
 
+            // 1. 氣溫折抵計算 (需亮起警報且 3 項避險全勾)
             const tempResult = getTierForCategory('temp');
             const tempMitigated = checkedStates.t1 && checkedStates.t2 && checkedStates.t3;
             const tempDiscount = (tempResult.tier && tempMitigated) ? Math.round(premium * tempResult.rate) : 0;
 
+            // 2. 雨量折抵計算 (需亮起警報且 3 項避險全勾)
             const rainResult = getTierForCategory('rain');
             const rainMitigated = checkedStates.r1 && checkedStates.r2 && checkedStates.r3;
             const rainDiscount = (rainResult.tier && rainMitigated) ? Math.round(premium * rainResult.rate) : 0;
 
+            // 3. 風速折抵計算 (需亮起警報且 3 項避險全勾)
             const windResult = getTierForCategory('wind');
             const windMitigated = checkedStates.w1 && checkedStates.w2 && checkedStates.w3;
             const windDiscount = (windResult.tier && windMitigated) ? Math.round(premium * windResult.rate) : 0;
 
+            // 累積加總
             const totalDiscount = tempDiscount + rainDiscount + windDiscount;
-            const totalPoints = tempDiscount + rainDiscount + windDiscount; 
+            const totalPoints = tempDiscount + rainDiscount + windDiscount; // 點數 1:1 回饋
 
             document.getElementById("discount-val").innerText = `$${totalDiscount}`;
             document.getElementById("points-val").innerText = `${totalPoints} 點`;
 
+            // 輸出超專業簡報精算明細
             const formulaDesc = document.getElementById("calculation-formula-desc");
             let breakdownHtml = `<div style="text-align: left;"><strong style="color: var(--primary-green);">📊 永續避險累積精算明細：</strong><br>`;
             let activeAlertCount = 0;
@@ -1449,6 +1476,7 @@
             if (event.key === 'Enter') sendChatMessage();
         }
 
+        // 🌟 [深度綁定版] 解決 AI 無法點名網頁特定 3 項避險動作的問題，將口語關懷與實體 checkbox 完美結合
         async function sendChatMessage() {
             const input = document.getElementById("chat-input");
             const query = input.value.trim();
@@ -1459,13 +1487,15 @@
 
             const loadingId = appendMessage("msg-bot", "系統分析中...");
 
+            // 1. 抓取網頁上目前的選區狀態
             const countySelect = document.getElementById("county-select").value;
             const districtSelect = document.getElementById("district-select").value;
-            const isLocationSelected = (countySelect && districtSelect) ? true : false; 
+            const isLocationSelected = (countySelect && districtSelect) ? true : false; // 嚴格判斷
 
             const county = countySelect || "未選擇縣市";
             const district = districtSelect || "未選擇行政區";
 
+            // 🌟 [核心修正] 將變數宣告移到最外層作用域，解決區域變數在大括弧外讀取不到而報錯的問題
             const temp = activeWeatherData.temp || "25";
             const pop = activeWeatherData.rain_pop || "0";
             const rainMm = activeWeatherData.rain || "0";
@@ -1475,27 +1505,42 @@
             const points = document.getElementById("points-val").innerText || "0 點";
             const isDemo = isDemoMode ? "開啟中 (模擬數據)" : "關閉中 (實時氣象資料)";
 
+            // 2. 警報狀態計算
             const tempResult = getTierForCategory('temp');
             const rainResult = getTierForCategory('rain');
             const windResult = getTierForCategory('wind');
             const totalAlertsActive = (tempResult.tier ? 1 : 0) + (rainResult.tier ? 1 : 0) + (windResult.tier ? 1 : 0);
 
+            // 🌟 [核心修改] 將網頁上 3 個分頁中共 9 項特定的避險動作文字與勾選進度，逐字打包進系統背景
             const tempStatus = tempResult.tier 
-                ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！避險狀態：${checkedStates.t1 && checkedStates.t2 && checkedStates.t3 ? "已全數完成" : "未完成"}`
-                : `🟢 正常。未亮起氣溫警報。`;
+                ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！
+                   保戶必須在網頁右側完成並勾選以下「3 項特定氣溫避險動作」才能獲得此項折抵：
+                   - 「已開啟廠區屋頂/外牆灑水降溫系統」 (狀態：${checkedStates.t1 ? "已完成" : "未完成"})
+                   - 「已啟用節能通風空調系統並監測用電負載」 (狀態：${checkedStates.t2 ? "已完成" : "未完成"})
+                   - 「已啟動備用儲冰/蓄冷系統以分散用電尖峰」 (狀態：${checkedStates.t3 ? "已完成" : "未完成"})`
+                : `🟢 正常。未亮起氣溫警報。(無此項折抵)`;
 
             const rainStatus = rainResult.tier 
-                ? `⚠️ 已亮起 [雨量 ${rainResult.label}警報]！避險狀態：${checkedStates.r1 && checkedStates.r2 && checkedStates.r3 ? "已全數完成" : "未完成"}`
-                : `🟢 正常。未亮起雨量警報。`;
+                ? `⚠️ 警告！已亮起 [雨量 ${rainResult.label}警報]！
+                   保戶必須在網頁右側完成並勾選以下「3 項特定雨量避險動作」才能獲得此項折抵：
+                   - 「一樓門市/倉庫已裝設防水閘門或堆疊防汛沙包」 (狀態：${checkedStates.r1 ? "已完成" : "未完成"})
+                   - 「已將一樓高單價貨物/庫存移至高處 (二樓以上)」 (狀態：${checkedStates.r2 ? "已完成" : "未完成"})
+                   - 「高風險泡水車輛已移至高處避難停車場」 (狀態：${checkedStates.r3 ? "已完成" : "未完成"})`
+                : `🟢 正常。未亮起雨量警報。(無此項折抵)`;
 
             const windStatus = windResult.tier 
-                ? `⚠️ 已亮起 [風速 ${windResult.label}警報]！避險狀態：${checkedStates.w1 && checkedStates.w2 && checkedStates.w3 ? "已全數完成" : "未完成"}`
-                : `🟢 正常。未亮起風速警報。`;
+                ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！
+                   保戶必須在網頁右側完成並勾選以下「3 項特定風速避險動作」才能獲得此項折抵：
+                   - 「室外廣告招牌、帆布、排風管已完成補強或收合」 (狀態：${checkedStates.w1 ? "已完成" : "未完成"})
+                   - 「玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
+                   - 「已暫停高空與戶外危險作業，人員全數撤回安全室內」 (狀態：${checkedStates.w3 ? "已完成" : "未完成"})`
+                : `🟢 正常。未亮起風速警報。(無此項折抵)`;
 
             const discountSummary = totalAlertsActive > 0
                 ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
                 : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
 
+            // 3. 動態決定要餵給 AI 的背景資料 (導入未選區防呆)
             let weatherStatusText = "";
             if (!isLocationSelected) {
                 weatherStatusText = `
@@ -1517,6 +1562,7 @@
 `;
             }
 
+            // 4. 建立 AI 大腦設定檔 (融入帶雨傘、風災、與 9 項實體動作點名)
             const weatherContext = `
 ${weatherStatusText}
 
@@ -1536,7 +1582,7 @@ ${weatherStatusText}
    - 當目前有任何災害警報亮起，且用戶詢問「如何避險」、「要怎麼折抵保費」、「避險動作」等問題時，請務必對照上方【各項指標狀態】中列出的 **3 項特定避險項目** 與目前的 **[已完成/未完成]** 進度，逐字進行精準的引導：
      * **若氣溫警報亮起**：請務必引導並提及「開啟廠區屋頂/外牆灑水降溫系統」、「啟用節能通風空調系統並監測用電負載」與「啟動備用儲冰/蓄冷系統以分散用電尖峰」這三個在網頁右側的特定動作。
      * **若雨量警報亮起**：請務必引導並提及「一樓門市/倉庫裝設防水閘門或堆疊防汛沙包」、「一樓高單價貨物/庫存移至高處」與「高風險泡水車輛移至高處避難停車場」這三個在網頁右側的特定動作。
-     * **若風速警報亮起**：請務必引導並提及「室外廣告招牌、帆布、排風管完成補強或收合」、「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」與「暫停高空與戶外危險作業，人員全數撤回安全室內」這三個在網頁右側的特定動作。
+     * **若風速警報亮起**：請務必引導並提及「室外廣告招牌、帆布、排風管完成補強或收合」與「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」與「已暫停高空與戶外危險作業，人員全數撤回安全室內」這三個在網頁右側的特定動作。
    - 說話時，請將這些「網頁上要勾選的實體動作」與您口頭上的生活防災建議完美結合。
 5. 說話風格與人設自稱：
    - 請經常在對話中以自己的名字自稱（例如：「Minami 建議您...」、「Minami 覺得當前天氣...」）。
@@ -1544,6 +1590,7 @@ ${weatherStatusText}
 `;
 
             try {
+                // 將請求 POST 送往您的 Cloudflare Worker URL
                 const response = await fetch(CLOUDFLARE_WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1576,9 +1623,10 @@ ${weatherContext}`
 
                     if (typeof OpenCC !== "undefined") {
                         const converter = OpenCC.Converter({ from: 'cn', to: 'twp' }); 
-                        replyText = converter(replyText); 
+                        replyText = converter(replyText); // 執行強制轉換 (不影響英文與數字)
                     }
 
+                    // 渲染乾淨的台灣繁體中文到聊天氣泡中
                     document.getElementById(loadingId).innerText = replyText;
                 }
             } catch (err) {
@@ -1587,14 +1635,15 @@ ${weatherContext}`
             }
         }
 
+        // 🌟 [修改處] 新增全域計數器，徹底解決 Date.now() 在同毫秒執行導致的 ID 衝突（蓋字與卡死問題）
         let msgCounter = 0; 
         function appendMessage(className, text) {
             const container = document.getElementById("chat-messages");
             const msg = document.createElement("div");
             msg.className = `message ${className}`;
             
-            msgCounter++; 
-            const msgId = "msg-" + Date.now() + "-" + msgCounter; 
+            msgCounter++; // 每次呼叫累加 1
+            const msgId = "msg-" + Date.now() + "-" + msgCounter; // 確保 ID 絕對唯一
             
             msg.id = msgId;
             msg.innerText = text;
@@ -1625,6 +1674,7 @@ ${weatherContext}`
             document.getElementById("login-trigger-btn").innerText = "登入帳戶";
             document.getElementById("login-trigger-btn").setAttribute("onclick", "toggleModal(true)");
         }
+
         // ==========================================
         // 🌟 [步驟 3 新增] 企業保戶 B2B 後台切換、連動與匯出邏輯
         // ==========================================
@@ -1705,7 +1755,7 @@ ${weatherContext}`
                 warningContainer.innerHTML += `
                     <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.01);">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong>🌧️ 嘉義民雄廠区 ── [雨量${rainResult.label}警報]</strong>
+                            <strong>🌧️ 嘉義民雄廠區 ── [雨量${rainResult.label}警報]</strong>
                             ${statusBadge}
                         </div>
                         <ul style="margin-top: 8px; padding-left: 18px; font-size: 0.85rem; color: #64748b; line-height: 1.5;">
