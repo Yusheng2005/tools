@@ -1700,7 +1700,7 @@ ${weatherContext}`
             // 1. 同步綠色點數 KPI
             document.getElementById("b2b-kpi-points").innerText = totalPoints;
 
-            // 2. 判斷是否有裝任何警報正在亮起
+            // 2. 判斷是否有任何警報正在亮起
             const tempResult = getTierForCategory('temp');
             const rainResult = getTierForCategory('rain');
             const windResult = getTierForCategory('wind');
@@ -1784,70 +1784,120 @@ ${weatherContext}`
                 `;
             }
 
-            // 4. 繪製右側「企業承保合約與自動理賠歷史表格」 (自動與前台勾選連動)
+            // 4. 繪製右側「企業承保合約與自動理賠歷史表格」
             const tableBody = document.getElementById("b2b-policy-table");
             tableBody.innerHTML = "";
 
-            // A. 大林廠防汛合約 (連動雨量)
-            let rainClaimBadge = '<span class="b2b-status-badge badge-normal">未觸發 (無雨災)</span>';
-            let rainClaimAmount = 0;
-            if (rainResult.tier) {
-                if (rainMitigated) {
-                    rainClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $50,000</span>';
-                    rainClaimAmount = 50000;
-                } else {
-                    rainClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未完全避險)</span>';
+            // 🌟 核心設計：第一列為「當前即時偵測案件」，後面三列為「歷史理賠紀錄」
+            
+            // 🌧️ 1. 當前即時偵測案件 (依據前台選定場域與警報動態跳動)
+            let currentClaimBadge = '<span class="b2b-status-badge badge-normal">未觸發 (環境正常)</span>';
+            let currentClaimAmount = 0;
+            let currentFieldName = `${county}${district}`;
+            let currentContractName = "大雨防汛指數險 (A)";
+            let currentInsuredSum = "$1,000,000";
+            let currentPremium = "$35,000";
+
+            // 根據目前切換的 Tab 分類判定
+            if (currentTab === 'temp') {
+                currentContractName = "烈日高溫停工補償險";
+                currentInsuredSum = "$1,500,000";
+                currentPremium = "$40,000";
+                if (tempResult.tier) {
+                    if (tempMitigated) {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $30,000</span>';
+                        currentClaimAmount = 30000;
+                    } else {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未落實避險)</span>';
+                    }
+                }
+            } else if (currentTab === 'rain') {
+                currentContractName = "大雨防汛指數險 (A)";
+                currentInsuredSum = "$1,000,000";
+                currentPremium = "$35,000";
+                if (rainResult.tier) {
+                    if (rainMitigated) {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $50,000</span>';
+                        currentClaimAmount = 50000;
+                    } else {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未落實避險)</span>';
+                    }
+                }
+            } else if (currentTab === 'wind') {
+                currentContractName = "強風防颱指數險 (B)";
+                currentInsuredSum = "$2,500,000";
+                currentPremium = "$45,000";
+                if (windResult.tier) {
+                    if (windMitigated) {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $80,000</span>';
+                        currentClaimAmount = 80000;
+                    } else {
+                        currentClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未落實避險)</span>';
+                    }
                 }
             }
 
-            // B. 大安店高溫合約 (連動氣溫)
-            let tempClaimBadge = '<span class="b2b-status-badge badge-normal">未觸發 (無熱災)</span>';
-            let tempClaimAmount = 0;
-            if (tempResult.tier) {
-                if (tempMitigated) {
-                    tempClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $30,000</span>';
-                    tempClaimAmount = 30000;
-                } else {
-                    tempClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未完全避險)</span>';
-                }
-            }
+            // 更新累積理賠 KPI 卡片 (歷史已撥款 $80,000 + 當前撥款額)
+            const historicalPaidAmount = 80000; // 歷史已賠付：$30,000 + $50,000
+            document.getElementById("b2b-kpi-claims").innerText = `$${(historicalPaidAmount + currentClaimAmount).toLocaleString()}`;
 
-            // C. 小港廠防颱合約 (連動風速)
-            let windClaimBadge = '<span class="b2b-status-badge badge-normal">未觸發 (無風災)</span>';
-            let windClaimAmount = 0;
-            if (windResult.tier) {
-                if (windMitigated) {
-                    windClaimBadge = '<span class="b2b-status-badge badge-success">✅ 已自動撥款 $80,000</span>';
-                    windClaimAmount = 80000;
-                } else {
-                    windClaimBadge = '<span class="b2b-status-badge badge-danger">❌ 拒絕理賠 (未完全避險)</span>';
-                }
-            }
-
-            // 更新累積理賠 KPI 卡片
-            document.getElementById("b2b-kpi-claims").innerText = `$${rainClaimAmount + tempClaimAmount + windClaimAmount}`;
-
+            // 寫入表格 (首行是動態當前案件，後三行是逼真的歷史紀錄)
             tableBody.innerHTML = `
-                <tr>
-                    <td style="font-weight: bold;">嘉義民雄廠區</td>
-                    <td>大雨防汛指數險 (A)</td>
-                    <td>$1,000,000</td>
-                    <td>$35,000</td>
-                    <td style="text-align: center;">${rainClaimBadge}</td>
+                <!-- 🔴 當前即時案況 -->
+                <tr style="background-color: #f8fafc; border-left: 4px solid var(--accent-mint);">
+                    <td style="font-weight: bold; color: var(--medium-green);">
+                        <span style="font-size: 0.75rem; background: var(--accent-mint); color: white; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">當前</span>
+                        ${currentFieldName}
+                    </td>
+                    <td style="color: var(--medium-green); font-weight: bold;">${currentContractName}</td>
+                    <td>${currentInsuredSum}</td>
+                    <td>${currentPremium}</td>
+                    <td style="text-align: center;">${currentClaimBadge}</td>
                 </tr>
+
+                <!-- 📜 歷史理賠案件 1 (台北大安店 ── 高溫已賠付) -->
                 <tr>
-                    <td style="font-weight: bold;">台北大安店</td>
+                    <td>
+                        <span style="font-size: 0.75rem; background: #e2e8f0; color: #64748b; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">歷史</span>
+                        2025/08/15 台北大安店
+                    </td>
                     <td>烈日高溫停工補償險</td>
                     <td>$1,500,000</td>
                     <td>$40,000</td>
-                    <td style="text-align: center;">${tempClaimBadge}</td>
+                    <td style="text-align: center;">
+                        <span class="b2b-status-badge badge-success">✅ 歷史已撥款 $30,000</span><br>
+                        <span style="font-size: 0.75rem; color: #64748b;">(熱浪達標，且廠區已落實屋頂灑水與空調負載)</span>
+                    </td>
                 </tr>
+
+                <!-- 📜 歷史理賠案件 2 (高雄小港廠 ── 颱風遭拒賠) -->
                 <tr>
-                    <td style="font-weight: bold;">高雄小港廠區</td>
+                    <td>
+                        <span style="font-size: 0.75rem; background: #e2e8f0; color: #64748b; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">歷史</span>
+                        2025/10/02 高雄小港廠區
+                    </td>
                     <td>強風防颱指數險 (B)</td>
                     <td>$2,500,000</td>
                     <td>$45,000</td>
-                    <td style="text-align: center;">${windClaimBadge}</td>
+                    <td style="text-align: center;">
+                        <span class="b2b-status-badge badge-danger">❌ 歷史拒絕理賠 $0</span><br>
+                        <span style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">(風力達標，但檢查哨回報招牌與鐵捲門未收合)</span>
+                    </td>
+                </tr>
+
+                <!-- 📜 歷史理賠案件 3 (嘉義民雄廠 ── 豪雨已賠付) -->
+                <tr>
+                    <td>
+                        <span style="font-size: 0.75rem; background: #e2e8f0; color: #64748b; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">歷史</span>
+                        2026/01/12 嘉義民雄廠區
+                    </td>
+                    <td>大雨防汛指數險 (A)</td>
+                    <td>$1,000,000</td>
+                    <td>$35,000</td>
+                    <td style="text-align: center;">
+                        <span class="b2b-status-badge badge-success">✅ 歷史已撥款 $50,000</span><br>
+                        <span style="font-size: 0.75rem; color: #64748b;">(雨量達標，且防水閘門與沙包確實完成裝設)</span>
+                    </td>
                 </tr>
             `;
         }
