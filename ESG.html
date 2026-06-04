@@ -978,6 +978,7 @@
         };
         let isDemoMode = false;
 
+        // 修正後的預設折扣率 (0.1%、0.05%、0.01%) 與雙重閥值
         const RULES_CONFIG = {
             temp: {
                 yellow_threshold: 36, yellow_rate: 0.0001, // 0.01%
@@ -997,6 +998,7 @@
             }
         };
 
+        // 避險動作清單 (全部為 3 項)
         const MITIGATION_ITEMS = {
             temp: [
                 { id: "t1", text: "已開啟廠區屋頂/外牆灑水降溫系統" },
@@ -1484,7 +1486,6 @@
             const county = countySelect || "未選擇縣市";
             const district = districtSelect || "未選擇行政區";
 
-            // 🌟 [核心修正] 將變數宣告移到最外層作用域，解決區域變數在大括弧外讀取不到而報錯的問題
             const temp = activeWeatherData.temp || "25";
             const pop = activeWeatherData.rain_pop || "0";
             const rainMm = activeWeatherData.rain || "0";
@@ -1521,7 +1522,7 @@
                 ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！
                    保戶必須在網頁右側完成並勾選以下「3 項特定風速避險動作」才能獲得此項折抵：
                    - 「室外廣告招牌、帆布、排風管已完成補強或收合」 (狀態：${checkedStates.w1 ? "已完成" : "未完成"})
-                   - 「玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
+                   - 「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
                    - 「已暫停高空與戶外危險作業，人員全數撤回安全室內」 (狀態：${checkedStates.w3 ? "已完成" : "未完成"})`
                 : `🟢 正常。未亮起風速警報。(無此項折抵)`;
 
@@ -1579,7 +1580,6 @@ ${weatherStatusText}
 `;
 
             try {
-                // 將請求 POST 送往您的 Cloudflare Worker URL
                 const response = await fetch(CLOUDFLARE_WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1615,7 +1615,6 @@ ${weatherContext}`
                         replyText = converter(replyText); // 執行強制轉換 (不影響英文與數字)
                     }
 
-                    // 渲染乾淨的台灣繁體中文到聊天氣泡中
                     document.getElementById(loadingId).innerText = replyText;
                 }
             } catch (err) {
@@ -1624,15 +1623,14 @@ ${weatherContext}`
             }
         }
 
-        // 🌟 [修改處] 新增全域計數器，徹底解決 Date.now() 在同毫秒執行導致的 ID 衝突（蓋字與卡死問題）
         let msgCounter = 0; 
         function appendMessage(className, text) {
             const container = document.getElementById("chat-messages");
             const msg = document.createElement("div");
             msg.className = `message ${className}`;
             
-            msgCounter++; // 每次呼叫累加 1
-            const msgId = "msg-" + Date.now() + "-" + msgCounter; // 確保 ID 絕對唯一
+            msgCounter++; 
+            const msgId = "msg-" + Date.now() + "-" + msgCounter; 
             
             msg.id = msgId;
             msg.innerText = text;
