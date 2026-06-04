@@ -599,6 +599,21 @@
             box-shadow: 0 0 10px rgba(45, 106, 79, 0.4);
             font-weight: bold;
         }
+/* 🌟 [步驟 2 新增在這裡] B2B 企業後台專用表格與排版 CSS */
+    #b2b-view table th, #b2b-view table td {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 12px 8px;
+    }
+    /* ... 更多 B2B CSS 樣式 ... */
+
+    /* [先前加入的] 模擬按鈕恆亮樣式 */
+    .demo-btn.active {
+        background-color: var(--medium-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        box-shadow: 0 0 10px rgba(45, 106, 79, 0.4);
+        font-weight: bold;
+    }
     </style>
 </head>
 <body>
@@ -616,17 +631,53 @@
         <h1><i class="fa-solid fa-shield-halved"></i> ClimateBeaver AI 平台</h1>
         <div class="auth-container">
             <span id="user-status" style="font-size: 0.9rem;">訪客模式</span>
+<!-- 🌟 [步驟 A 新增在這裡] 企業後台切換按鈕 -->
+            <button class="btn-login" id="toggle-view-btn" onclick="toggleView()" style="background-color: var(--medium-green); margin-right: 10px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-chart-line"></i> 🏢 企業防禦艙後台
+            </button>
             <button class="btn-login" id="login-trigger-btn" onclick="toggleModal(true)">登入帳戶</button>
         </div>
     </header>
 
     <!-- 主要內容區 -->
     <div class="main-container">
+	<!-- 🌟 [修改點 1] 在這裡加上開頭標籤 -->
+        <div id="b2c-view" style="display: flex; gap: 20px; width: 100%;">
         
         <!-- 左欄：天氣監測與模擬 -->
         <div class="column weather-section" id="left-column">
             <h2><i class="fa-solid fa-cloud-sun-rain"></i> 即時氣象監測</h2>
+            </div> <!-- 🌟 [修改點 2 結尾] 把 b2c-view 關起來 -->
+<!-- 主要內容區 -->
+    <div class="main-container">
+        
+        <!-- 🌟 [修改點 1] 在這裡加上開頭標籤 -->
+        <div id="b2c-view" style="display: flex; gap: 20px; width: 100%;">
+
+            <!-- 左欄：天氣監測與模擬 (原本內容均維持不動) -->
+            <div class="column weather-section" id="left-column" style="flex: 1;">
+                <h2><i class="fa-solid fa-cloud-sun-rain"></i> 即時氣象監測</h2>
+                <!-- ... 左欄的其他內容 ... -->
+            </div>
             
+            <!-- 右欄：保險理賠與動態計算 (原本內容均維持不動) -->
+            <div class="column insurance-section" id="right-column" style="flex: 1;">
+                <h2><i class="fa-solid fa-calculator"></i> 動態避險與保費試算</h2>
+                <!-- ... 右欄的其他內容，直到最後一個結尾的 </div> -->
+                 <div class="result-card">
+                     <!-- ... -->
+                 </div>
+            </div> <!-- 🌟 [修改點 2 結尾] 這是原本右欄 #right-column 的結尾 </div> -->
+
+        </div> <!-- 🌟 [修改點 2] 在這裡加上結束標籤，把 b2c-view 關起來 -->
+
+        <!-- 🌟 [步驟 1-C 新增] 企業保戶 B2B 管理後台層 (接在 b2c-view 的正下方，預設 display: none;) -->
+        <div id="b2b-view" class="column" style="display: none; width: 100%; border-top: 5px solid var(--primary-green); flex-direction: column; gap: 25px; background: white;">
+            <!-- ... 貼上之前給您的 B2B 整大段 HTML 內容 ... -->
+        </div>
+
+    </div> <!-- 這是原本 main-container 最大的結尾 </div> -->
+
             <!-- 區域選擇下拉選單 -->
             <div class="selector-group">
                 <select id="county-select" onchange="handleCountyChange()">
