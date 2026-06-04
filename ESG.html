@@ -592,15 +592,6 @@
             border-radius: 4px;
         }
 
-        /* 🌟 模擬按鈕恆亮樣式 */
-        .demo-btn.active {
-            background-color: var(--medium-green) !important;
-            color: white !important;
-            border-color: var(--primary-green) !important;
-            box-shadow: 0 0 10px rgba(45, 106, 79, 0.4);
-            font-weight: bold;
-        }
-
         /* 🌟 B2B 企業後台專用表格與排版 CSS */
         #b2b-view table th, #b2b-view table td {
             border-bottom: 1px solid #f1f5f9;
@@ -1407,6 +1398,7 @@
             calculateIncentive();
         }
 
+        // 🌟 [重構] 多重災害避險保費累積精算
         function calculateIncentive() {
             const premium = parseFloat(document.getElementById("premium-amount").value) || 0;
 
@@ -1513,7 +1505,7 @@
 
             // 🌟 [核心修改] 將網頁上 3 個分頁中共 9 項特定的避險動作文字與勾選進度，逐字打包進系統背景
             const tempStatus = tempResult.tier 
-                ? `⚠️ 已亮起 [氣溫 ${tempResult.label}警報]！
+                ? `⚠️ 警告！已亮起 [氣溫 ${tempResult.label}警報]！
                    保戶必須在網頁右側完成並勾選以下「3 項特定氣溫避險動作」才能獲得此項折抵：
                    - 「已開啟廠區屋頂/外牆灑水降溫系統」 (狀態：${checkedStates.t1 ? "已完成" : "未完成"})
                    - 「已啟用節能通風空調系統並監測用電負載」 (狀態：${checkedStates.t2 ? "已完成" : "未完成"})
@@ -1532,7 +1524,7 @@
                 ? `⚠️ 警告！已亮起 [風速 ${windResult.label}警報]！
                    保戶必須在網頁右側完成並勾選以下「3 項特定風速避險動作」才能獲得此項折抵：
                    - 「室外廣告招牌、帆布、排風管已完成補強或收合」 (狀態：${checkedStates.w1 ? "已完成" : "未完成"})
-                   - 「玻璃門窗已貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
+                   - 「玻璃門窗貼上防風膠帶，並拉下防颱鐵捲門」 (狀態：${checkedStates.w2 ? "已完成" : "未完成"})
                    - 「已暫停高空與戶外危險作業，人員全數撤回安全室內」 (狀態：${checkedStates.w3 ? "已完成" : "未完成"})`
                 : `🟢 正常。未亮起風速警報。(無此項折抵)`;
 
@@ -1540,7 +1532,7 @@
                 ? `目前共有 ${totalAlertsActive} 項氣候警報亮起。已獲得保費折抵 ${discount} 及防災點數 ${points}。`
                 : `目前天氣良好，無任何警報亮起。折抵金額為 $0 元。`;
 
-            // 3. 動態決定要餵給 AI 的背景資料 (導入未選區防呆)
+            // 3. 動態決定要餵給 AI 的背景資料
             let weatherStatusText = "";
             if (!isLocationSelected) {
                 weatherStatusText = `
@@ -1573,7 +1565,7 @@ ${weatherStatusText}
    - 如果當前有任何災害警報亮起（例如暴雨或颶風），請將其描述為「嚴正的防災任務」，千萬不要說出「天氣很適合避險/很適合防災」這種不自然的句子。請用「因應目前嚴峻的氣候，建議您盡快落實避險動作以確保生命財產安全...」等口吻。
 3. 帶雨傘與天氣防護建議（❌ 鋼鐵約束：只有在保戶主動詢問「要不要帶傘」、「出門要帶傘嗎」或「會下雨嗎」時才回答！）：
    - ⚠️ [最高安全優先級]：若目前「風力級數達 8 級以上」：此時風力極強（${windScale} 級），請「強烈警告」保戶【在戶外絕對禁止撐任何傘（無論是雨傘還是陽傘都極易被瞬間吹碎並造成人身危險）】！請極力勸導保戶非必要不准出門。
-   - 若風力正常，且目前氣溫高達 35°C 以上：請指出烈日高溫達 ${temp}°C。此時帶傘出門是為了「防曬、遮陽（遮陽傘）」，並非為了防雨。
+   - 若風力正常，且目前氣溫高達 35°C 以上：請指出烈日高溫達 ${temp}°C。此時帶傘出門是為了「防曬、遮陽（遮陽傘）」，並非為防雨。
    - 若累積雨量達 200mm 以上（且風力小於8級）：累積降雨高達 ${rainMm} mm！請呼籲保戶儘量避免出門，若外出應穿著防風重裝雨衣，警惕淹水。
    - 若降雨機率 >= 70% 且雨量、風速正常：指出降雨機率高達 ${pop}%，強烈建議出門攜帶大雨傘或雨具！
    - 若降雨機率在 30% ~ 69% 之間：降雨機率為 ${pop}%，有短暫陣雨可能，建議隨身攜帶折疊傘。
@@ -1619,8 +1611,10 @@ ${weatherContext}`
                 if (data.error) {
                     document.getElementById(loadingId).innerText = `【系統提示】${data.error}`;
                 } else {
+                    // 🌟 [步驟 2] 讀取 AI 原始回覆內容
                     let replyText = data.message.content;
 
+                    // 如果 OpenCC 轉換庫載入成功，執行「大陸簡體與詞彙 -> 台灣標準繁體中文與詞彙」的強制轉換
                     if (typeof OpenCC !== "undefined") {
                         const converter = OpenCC.Converter({ from: 'cn', to: 'twp' }); 
                         replyText = converter(replyText); // 執行強制轉換 (不影響英文與數字)
